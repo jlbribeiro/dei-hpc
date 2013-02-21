@@ -1,2 +1,2 @@
-LD_LIBRARIES=-L{library path goes here}
-INCLUDES=-I{include path goes here}
+LD_LIBRARIES=-L/usr/local/cuda/lib64 -L/usr/lib/nvidia-current
+INCLUDES=-I/usr/local/cuda/include

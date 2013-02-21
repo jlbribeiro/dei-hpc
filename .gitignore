@@ -1,9 +1,7 @@
-# Temporary files
 *~
 ~*
 
-# Object files
 *.o
-
-# Executables
 *.out
+
+*.pyc
