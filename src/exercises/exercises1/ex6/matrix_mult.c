@@ -21,37 +21,6 @@ float h_output[MAX_N * MAX_N];
 
 int n;
 
-char* file_to_string(char *filepath)
-{
-	size_t size;
-	FILE* file;
-	char* string;
-
-	file = fopen(filepath, "r");
-	if (!file)
-	{
-		fprintf(stderr, "Failed to read kernel");
-		exit(1);
-	}
-
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	fseek(file, 0, SEEK_SET);
-
-	string = (char *) malloc(size + 1);
-	fread(string, size, 1, file);
-	string[size] = 0;
-
-	return string;
-}
-
-void swapf(float *a, float *b)
-{
-	float tmp = *a;
-	*a = *b;
-	*b = tmp;
-}
-
 void matrix_print(float *mat, int n)
 {
 	int i, j;
@@ -65,28 +34,29 @@ void matrix_print(float *mat, int n)
 	}
 }
 
-void matrix_read(char *filename, float *mat1, float *mat2)
+void matrix_read(char *filepath, float *mat1, float *mat2)
 {
-	FILE *f = fopen(filename, "r");
+	FILE *file;
 	int i, j;
 
-	if (f == NULL)
+	file = fopen(filepath, "r");
+	if (!file)
 	{
-		printf("File [%s] not found!\n", filename);
-		exit(0);
+		fprintf(stderr, "Error: File \"%s\" couldn't be open. Aborting.\n", filepath);
+		exit(-1);
 	}
 
-	fscanf(f, "%d", &n);
+	fscanf(file, "%d", &n);
 
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++)
-			fscanf(f, "%f", &mat1[i * n + j]);
+			fscanf(file, "%f", &mat1[i * n + j]);
 
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++)
-			fscanf(f, "%f", &mat2[i * n + j]);
+			fscanf(file, "%f", &mat2[i * n + j]);
 
-	fclose(f);
+	fclose(file);
 }
 
 void matrix_transpose(float *mat, int n)
@@ -149,15 +119,15 @@ long matrix_mult_cpu_cache(float *mat1, float *mat2, float *output, int n)
 
 void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 {
-	size_t global;
-	size_t local;
+	size_t global_size;
+	size_t local_size;
 
 	char *kernel_src;
 
 	cl_int err;
 	cl_platform_id platform_id;
 	cl_device_id device_id;
-	size_t local_size;
+	size_t max_workgroup_size;
 
 	cl_context context;
 	cl_command_queue commands;
@@ -205,7 +175,7 @@ void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 	err |= clEnqueueWriteBuffer(commands, d_mat2, CL_TRUE, 0, sizeof(float) * n * n, mat2, 0, NULL, NULL);
 	clErrorHandling("clEnqueueWriteBuffer");
 
-	err = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &local_size, NULL);
+	err = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &max_workgroup_size, NULL);
 	clErrorHandling("clGetDeviceInfo");
 
 	/* prepare kernel args */
@@ -215,16 +185,16 @@ void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 	err |= clSetKernelArg(kernel, 3, sizeof(unsigned int), &n);
 
 	/* execute */
-	global = local_size;
-	local = local_size;
+	global_size = max_workgroup_size;
+	local_size = max_workgroup_size;
 
-	err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &event);
+	err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global_size, &local_size, 0, NULL, &event);
 	clErrorHandling("clEnqueueNDRangeKernel");
 
 	clWaitForEvents(1, &event);
 	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
 	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
-	fprintf(stderr, "Time for event (ms): %10.5f \n", (end - start)/1000000.0);
+	fprintf(stderr, "Time for event (ms): %10.5f \n", (end - start) / 1000000.0);
 
 	err = clFinish(commands);
 	clErrorHandling("clFinish");

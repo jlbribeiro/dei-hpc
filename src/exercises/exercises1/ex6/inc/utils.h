@@ -12,3 +12,36 @@ long calc_time(struct timeval start, struct timeval end)
 	useconds = end.tv_usec - start.tv_usec;
 	return ((seconds) * 1000 + useconds/1000.0) + 0.5;
 }
+
+char* file_to_string(char *filepath)
+{
+	size_t size;
+	FILE* file;
+	char* string;
+
+	file = fopen(filepath, "r");
+	if (!file)
+	{
+		fprintf(stderr, "Error: File \"%s\" couldn't be open. Aborting.", filepath);
+		exit(-1);
+	}
+
+	fseek(file, 0, SEEK_END);
+	size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+	string = (char *) malloc((size + 1) * sizeof(char));
+	fread(string, size, 1, file);
+	fclose(file);
+
+	string[size] = '\0';
+
+	return string;
+}
+
+void swapf(float *a, float *b)
+{
+	float tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
