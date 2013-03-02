@@ -2,21 +2,27 @@
 
 from random import random
 
-def generate_matrix(size, f):
+def generate_matrix(size):
 	m = ""
 	for i in xrange(size):
 		for j in xrange(size):
 			m += str(random()) + " "
 		m += "\n"
-	
-	f.write(str(size) + "\n")
-	f.write(m)
-	f.close()
+
+	return m
 
 def main():
-	size = int(input())
-	generate_matrix(size, open("matrix1", "w"))
-	generate_matrix(size, open("matrix2", "w"))
+	size = int(input("Matrices size: "))
+
+	f = open("matrices.in", "w")
+
+	f.write(str(size) + "\n")
+
+	f.write(generate_matrix(size))
+	f.write(generate_matrix(size))
+
+	f.close()
+
 	print "Matrices generated!"
 
 if __name__ == '__main__':

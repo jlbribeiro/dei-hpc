@@ -1,38 +1,25 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <CL/cl.h>
+
+#include "inc/utils.h"
+
+#define DEBUG
+#define MATRIX_SAMPLE fprintf(stderr, "%f %f %f %f\n", output[0], output[1], output[n * n - 2], output[n * n - 1])
 
 #define KERNEL_SRC "sqrt_kernel.cl"
 #define MAX_N 1024
 
-#define MATRIX1_FILE "matrix1"
-#define MATRIX2_FILE "matrix2"
-
-#define clErrorHandling(method) if (err != CL_SUCCESS) { fprintf(stderr, "Error @ %s - code: %d", method, err); exit(1); }
+#define MATRICES_FILE "matrices.in"
 
 float h_mat1[MAX_N * MAX_N];
 float h_mat2[MAX_N * MAX_N];
 float h_output[MAX_N * MAX_N];
-int n = MAX_N;
 
-long calc_time(struct timeval start, struct timeval end)
-{
-	long mtime, seconds, useconds;
-
-	seconds  = end.tv_sec  - start.tv_sec;
-	useconds = end.tv_usec - start.tv_usec;
-	return ((seconds) * 1000 + useconds/1000.0) + 0.5;
-}
-
-void swapf(float *a, float *b)
-{
-	float tmp = *a;
-	*a = *b;
-	*b = tmp;
-}
+int n;
 
 char* file_to_string(char *filepath)
 {
@@ -43,7 +30,7 @@ char* file_to_string(char *filepath)
 	file = fopen(filepath, "r");
 	if (!file)
 	{
-		fprintf(stderr, "Failed to load file [%s]", filepath);
+		fprintf(stderr, "Failed to read kernel");
 		exit(1);
 	}
 
@@ -58,24 +45,11 @@ char* file_to_string(char *filepath)
 	return string;
 }
 
-void matrix_read(char *filename, float *mat)
+void swapf(float *a, float *b)
 {
-	FILE *f = fopen(filename, "r");
-	int i, j;
-
-	if (f == NULL)
-	{
-		printf("File [%s] not found!\n", filename);
-		exit(0);
-	}
-
-	fscanf(f, "%d", &n);
-
-	for (i = 0; i < n; i++)
-		for (j = 0; j < n; j++)
-			fscanf(f, "%f", &mat[i * n + j]);
-
-	fclose(f);
+	float tmp = *a;
+	*a = *b;
+	*b = tmp;
 }
 
 void matrix_print(float *mat, int n)
@@ -91,6 +65,30 @@ void matrix_print(float *mat, int n)
 	}
 }
 
+void matrix_read(char *filename, float *mat1, float *mat2)
+{
+	FILE *f = fopen(filename, "r");
+	int i, j;
+
+	if (f == NULL)
+	{
+		printf("File [%s] not found!\n", filename);
+		exit(0);
+	}
+
+	fscanf(f, "%d", &n);
+
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			fscanf(f, "%f", &mat1[i * n + j]);
+
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			fscanf(f, "%f", &mat2[i * n + j]);
+
+	fclose(f);
+}
+
 void matrix_transpose(float *mat, int n)
 {
 	int i, j;
@@ -98,36 +96,58 @@ void matrix_transpose(float *mat, int n)
 	for (i = 0; i < n; i++)
 		for (j = i + 1; j < n; j++)
 			swapf(&mat[i * n + j], &mat[j * n + i]);
-}
-
-void cpu_mult_naive(float *mat1, float *mat2, float* res, int n)
-{
-	int i, j, k;
-
-	memset(res, 0, n * n * sizeof(float));
-	
-	for (i = 0; i < n; ++i)
-		for (j = 0; j < n; ++j)
-			for (k = 0; k < n; ++k)
-				res[i * n + j] += mat1[i * n + k] * mat2[k * n + j];
 
 }
 
-void cpu_mult_cache(float *mat1, float *mat2, float* res, int n)
+long matrix_mult_cpu_naive(float *mat1, float *mat2, float *output, int n)
 {
+	struct timeval start, end;
+
 	int i, j, k;
 
-	memset(res, 0, n * n * sizeof(float));
-	
+	memset(output, 0, n * n * sizeof(float));
+
+	START_CHRONO;
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			for (k = 0; k < n; k++)
+				output[i * n + j] += mat1[i * n + k] * mat2[k * n + j];
+
+	STOP_CHRONO;
+
+	#ifdef DEBUG
+		MATRIX_SAMPLE;
+	#endif
+
+	return GET_CHRONO;
+}
+
+long matrix_mult_cpu_cache(float *mat1, float *mat2, float *output, int n)
+{
+	struct timeval start, end;
+
+	int i, j, k;
+
+	memset(output, 0, n * n * sizeof(float));
+
+	START_CHRONO;
 	matrix_transpose(mat2, n);
 
-	for (i = 0; i < n; ++i)
-		for (j = 0; j < n; ++j)
-			for (k = 0; k < n; ++k)
-				res[i * n + j] += mat1[i * n + k] * mat2[j * n + k];
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			for (k = 0; k < n; k++)
+				output[i * n + j] += mat1[i * n + k] * mat2[j * n + k];
+
+	STOP_CHRONO;
+
+	#ifdef DEBUG
+		MATRIX_SAMPLE;
+	#endif
+
+	return GET_CHRONO;
 }
 
-void gpu_mult()
+void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 {
 	size_t global;
 	size_t local;
@@ -181,8 +201,8 @@ void gpu_mult()
 	d_output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * n * n, NULL, &err);
 	clErrorHandling("clCreateBuffer");
 
-	err = clEnqueueWriteBuffer(commands, d_mat1, CL_TRUE, 0, sizeof(float) * n * n, h_mat1, 0, NULL, NULL);
-	err |= clEnqueueWriteBuffer(commands, d_mat2, CL_TRUE, 0, sizeof(float) * n * n, h_mat2, 0, NULL, NULL);
+	err = clEnqueueWriteBuffer(commands, d_mat1, CL_TRUE, 0, sizeof(float) * n * n, mat1, 0, NULL, NULL);
+	err |= clEnqueueWriteBuffer(commands, d_mat2, CL_TRUE, 0, sizeof(float) * n * n, mat2, 0, NULL, NULL);
 	clErrorHandling("clEnqueueWriteBuffer");
 
 	err = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &local_size, NULL);
@@ -210,7 +230,7 @@ void gpu_mult()
 	clErrorHandling("clFinish");
 
 	/* transfer back */
-	err = clEnqueueReadBuffer(commands, d_output, CL_TRUE, 0, sizeof(float) * n, h_output, 0, NULL, NULL);
+	err = clEnqueueReadBuffer(commands, d_output, CL_TRUE, 0, sizeof(float) * n, output, 0, NULL, NULL);
 	clErrorHandling("clEnqueueReadBuffer");
 
 	matrix_print(h_output, n);
@@ -228,22 +248,19 @@ void gpu_mult()
 
 int main()
 {
-	struct timeval start, end;
+	long process_time;
 
-	matrix_read(MATRIX1_FILE, h_mat1);
-	matrix_read(MATRIX2_FILE, h_mat2);
+	matrix_read(MATRICES_FILE, h_mat1, h_mat2);
 
-	gettimeofday(&start, NULL);
-	cpu_mult_naive(h_mat1, h_mat2, h_output, n);
-	gettimeofday(&end, NULL);
-	printf("Finished CPU naïve in %ld milliseconds\n", calc_time(start, end));
+	process_time = matrix_mult_cpu_naive(h_mat1, h_mat2, h_output, n);
+	fprintf(stderr, "Finished CPU naïve in %ld milliseconds\n", process_time);
 
-	gettimeofday(&start, NULL);
-	cpu_mult_cache(h_mat1, h_mat2, h_output, n);
-	gettimeofday(&end, NULL);
-	printf("Finished CPU with use of cache in %ld milliseconds\n", calc_time(start, end));
+	fprintf(stderr, "\n");
 
-	// gpu_mult(NULL, NULL, NULL, 0);
+	process_time = matrix_mult_cpu_cache(h_mat1, h_mat2, h_output, n);
+	fprintf(stderr, "Finished CPU with use of cache in %ld milliseconds\n", process_time);
+
+	// process_time = matrix_mult_gpu(NULL, NULL, NULL, 0);
 
 	return 	0;
 }
