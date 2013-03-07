@@ -8,16 +8,16 @@
 #include "inc/utils.h"
 
 #define DEBUG
-#define MATRIX_SAMPLE fprintf(stderr, "%f %f %f %f\n", output[0], output[1], output[n * n - 2], output[n * n - 1])
+#define MATRIX_PRINT_SAMPLE fprintf(stderr, "%f %f %f %f\n", out[0], out[1], out[n * n - 2], out[n * n - 1])
 
-#define KERNEL_SRC "sqrt_kernel.cl"
+#define KERNEL_SRC "matrix_mult.cl"
 #define MAX_N 1024
 
 #define MATRICES_FILE "matrices.in"
 
 float h_mat1[MAX_N * MAX_N];
 float h_mat2[MAX_N * MAX_N];
-float h_output[MAX_N * MAX_N];
+float h_out[MAX_N * MAX_N];
 
 int n;
 
@@ -34,7 +34,7 @@ void matrix_print(float *mat, int n)
 	}
 }
 
-void matrix_read(char *filepath, float *mat1, float *mat2)
+void matrix_read(char *filepath, float *mat1, float *mat2, int *n)
 {
 	FILE *file;
 	int i, j;
@@ -46,15 +46,15 @@ void matrix_read(char *filepath, float *mat1, float *mat2)
 		exit(-1);
 	}
 
-	fscanf(file, "%d", &n);
+	fscanf(file, "%d", n);
 
-	for (i = 0; i < n; i++)
-		for (j = 0; j < n; j++)
-			fscanf(file, "%f", &mat1[i * n + j]);
+	for (i = 0; i < *n; i++)
+		for (j = 0; j < *n; j++)
+			fscanf(file, "%f", &mat1[i * *n + j]);
 
-	for (i = 0; i < n; i++)
-		for (j = 0; j < n; j++)
-			fscanf(file, "%f", &mat2[i * n + j]);
+	for (i = 0; i < *n; i++)
+		for (j = 0; j < *n; j++)
+			fscanf(file, "%f", &mat2[i * *n + j]);
 
 	fclose(file);
 }
@@ -69,36 +69,36 @@ void matrix_transpose(float *mat, int n)
 
 }
 
-long matrix_mult_cpu_naive(float *mat1, float *mat2, float *output, int n)
+long matrix_mult_cpu_naive(float *mat1, float *mat2, float *out, int n)
 {
 	struct timeval start, end;
 
 	int i, j, k;
 
-	memset(output, 0, n * n * sizeof(float));
+	memset(out, 0, n * n * sizeof(float));
 
 	START_CHRONO;
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++)
 			for (k = 0; k < n; k++)
-				output[i * n + j] += mat1[i * n + k] * mat2[k * n + j];
+				out[i * n + j] += mat1[i * n + k] * mat2[k * n + j];
 
 	STOP_CHRONO;
 
 	#ifdef DEBUG
-		MATRIX_SAMPLE;
+		MATRIX_PRINT_SAMPLE;
 	#endif
 
 	return GET_CHRONO;
 }
 
-long matrix_mult_cpu_cache(float *mat1, float *mat2, float *output, int n)
+long matrix_mult_cpu_cache(float *mat1, float *mat2, float *out, int n)
 {
 	struct timeval start, end;
 
 	int i, j, k;
 
-	memset(output, 0, n * n * sizeof(float));
+	memset(out, 0, n * n * sizeof(float));
 
 	START_CHRONO;
 	matrix_transpose(mat2, n);
@@ -106,18 +106,18 @@ long matrix_mult_cpu_cache(float *mat1, float *mat2, float *output, int n)
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++)
 			for (k = 0; k < n; k++)
-				output[i * n + j] += mat1[i * n + k] * mat2[j * n + k];
+				out[i * n + j] += mat1[i * n + k] * mat2[j * n + k];
 
 	STOP_CHRONO;
 
 	#ifdef DEBUG
-		MATRIX_SAMPLE;
+		MATRIX_PRINT_SAMPLE;
 	#endif
 
 	return GET_CHRONO;
 }
 
-void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
+void matrix_mult_gpu(float *mat1, float *mat2, float *out, int n)
 {
 	size_t global_size;
 	size_t local_size;
@@ -135,7 +135,7 @@ void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 	cl_kernel kernel;
 	cl_mem d_mat1;
 	cl_mem d_mat2;
-	cl_mem d_output;
+	cl_mem d_out;
 
 	cl_event event;
 	cl_ulong start, end;
@@ -168,7 +168,7 @@ void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 	/* allocate memory and send to gpu */
 	d_mat1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * n * n, NULL, &err);
 	d_mat2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * n * n, NULL, &err);
-	d_output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * n * n, NULL, &err);
+	d_out = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * n * n, NULL, &err);
 	clErrorHandling("clCreateBuffer");
 
 	err = clEnqueueWriteBuffer(commands, d_mat1, CL_TRUE, 0, sizeof(float) * n * n, mat1, 0, NULL, NULL);
@@ -181,7 +181,7 @@ void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 	/* prepare kernel args */
 	err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_mat1);
 	err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &d_mat2);
-	err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_output);
+	err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_out);
 	err |= clSetKernelArg(kernel, 3, sizeof(unsigned int), &n);
 
 	/* execute */
@@ -200,15 +200,15 @@ void matrix_mult_gpu(float *mat1, float *mat2, float *output, int n)
 	clErrorHandling("clFinish");
 
 	/* transfer back */
-	err = clEnqueueReadBuffer(commands, d_output, CL_TRUE, 0, sizeof(float) * n, output, 0, NULL, NULL);
+	err = clEnqueueReadBuffer(commands, d_out, CL_TRUE, 0, sizeof(float) * n * n, out, 0, NULL, NULL);
 	clErrorHandling("clEnqueueReadBuffer");
 
-	matrix_print(h_output, n);
+	MATRIX_PRINT_SAMPLE;
 
 	/* cleanup*/
 	clReleaseMemObject(d_mat1);
 	clReleaseMemObject(d_mat2);
-	clReleaseMemObject(d_output);
+	clReleaseMemObject(d_out);
 	clReleaseProgram(program);
 	clReleaseKernel(kernel);
 	clReleaseCommandQueue(commands);
@@ -220,17 +220,21 @@ int main()
 {
 	long process_time;
 
-	matrix_read(MATRICES_FILE, h_mat1, h_mat2);
+	matrix_read(MATRICES_FILE, h_mat1, h_mat2, &n);
 
-	process_time = matrix_mult_cpu_naive(h_mat1, h_mat2, h_output, n);
+	fprintf(stderr, "Starting hard work.\n");
+/*
+	process_time = matrix_mult_cpu_naive(h_mat1, h_mat2, h_out, n);
 	fprintf(stderr, "Finished CPU naïve in %ld milliseconds\n", process_time);
 
 	fprintf(stderr, "\n");
-
-	process_time = matrix_mult_cpu_cache(h_mat1, h_mat2, h_output, n);
+*/
+	process_time = matrix_mult_cpu_cache(h_mat1, h_mat2, h_out, n);
 	fprintf(stderr, "Finished CPU with use of cache in %ld milliseconds\n", process_time);
 
-	// process_time = matrix_mult_gpu(NULL, NULL, NULL, 0);
+	fprintf(stderr, "\n");
+
+	matrix_mult_gpu(h_mat1, h_mat2, h_out, n);
 
 	return 	0;
 }
