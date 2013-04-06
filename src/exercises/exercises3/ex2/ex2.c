@@ -6,7 +6,6 @@
 #include <omp.h>
 #include <stdio.h>
 
-#define N_THREADS 8
 #define SIZE 100000
 
 #define NUMBERS_FILE "numbers.txt"
@@ -29,7 +28,6 @@ void read_file(char *filename, float *A, float *B)
 void worker(float *A, float *B, float *C)
 {
 	int i;
-	float sum = 0;
 
 	#pragma omp parallel for
 	for (i = 0; i < SIZE; i ++)
