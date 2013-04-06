@@ -234,12 +234,12 @@ int main()
 	matrix_read(MATRICES_FILE, h_mat1, h_mat2, &n);
 
 	fprintf(stderr, "Starting hard work.\n");
-/*
+
 	process_time = matrix_mult_cpu_naive(h_mat1, h_mat2, h_out, n);
 	fprintf(stderr, "Finished CPU naïve in %ld milliseconds\n", process_time);
 
 	fprintf(stderr, "\n");
-*/
+
 	process_time = matrix_mult_cpu_cache(h_mat1, h_mat2, h_out, n);
 	fprintf(stderr, "Finished CPU with use of cache in %ld milliseconds\n", process_time);
 
