@@ -1,0 +1,6 @@
+Escreva um programa que adicione dois vetores de 100000 floats em OpenMP.
+a) Como poderá dividir o trabalho por várias threads?
+	As threads deverão iniciar na posição igual ao seu ID, dando depois saltos iguais ao número de threads existentes.
+b) Na diretiva “for”, qual a diferença entre as cláusulas static e dynamic?
+	Static: pre aloca todo o trabalho que vai fazer e quando o acabar, a thread termina.
+	Dynamic: pre aloca uma pequena porção do trabalho que vai fazer, pedindo mais quando terminar. 
