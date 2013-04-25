@@ -28,7 +28,10 @@ void match_naive()
 			}
 
 			if (k == TRANSACTIONS_LEN)
+				/* TODO
 				match_enqueue(i, rules[j][RULES_LEN - 1]);
+				*/
+				printf("TODO: FIX NAIVE!\n");
 
 		}
 	}

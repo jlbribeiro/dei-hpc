@@ -10,18 +10,12 @@ typedef struct match_t
 
 } match_t;
 
-typedef struct match_buffer_t
+typedef struct thread_output_buffer_t
 {
-	match_t buffer[BUFFER_SIZE];
+	char buffer[THREAD_OUTPUT_BUF_SIZE];
 	int length;
-	int enqueue_index;
-	int dequeue_index;
-	pthread_mutex_t mutex;
-	pthread_cond_t empty;
-	pthread_cond_t full;
-	bool closed;
 
-} match_output_buffer_t;
+} thread_output_buffer_t;
 
 typedef struct work_queue_t
 {

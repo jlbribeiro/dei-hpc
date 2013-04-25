@@ -1,60 +1,30 @@
-
-[Bounded] Took 10094 ms to match 1000000 transactions (99068.74 transactions per second)!
-
-[Bounded] Took 11067 ms to match 1000000 transactions (90358.72 transactions per second)!
-
-[Bounded] Took 10380 ms to match 1000000 transactions (96339.10 transactions per second)!
-
-[Bounded] Took 10773 ms to match 1000000 transactions (92824.65 transactions per second)!
-
-[Bounded] Took 10194 ms to match 1000000 transactions (98096.91 transactions per second)!
-
-[Bounded] Took 11233 ms to match 1000000 transactions (89023.41 transactions per second)!
-
-[Bounded] Took 10302 ms to match 1000000 transactions (97068.52 transactions per second)!
-
-[Bounded] Took 11216 ms to match 1000000 transactions (89158.34 transactions per second)!
-
-[Bounded] Took 10342 ms to match 1000000 transactions (96693.09 transactions per second)!
-
-[Bounded] Took 11267 ms to match 1000000 transactions (88754.76 transactions per second)!
-
-[Bounded] Took 10292 ms to match 1000000 transactions (97162.84 transactions per second)!
-
-[Bounded] Took 11233 ms to match 1000000 transactions (89023.41 transactions per second)!
-
-[Bounded] Took 10347 ms to match 1000000 transactions (96646.36 transactions per second)!
-
-[Bounded] Took 11292 ms to match 1000000 transactions (88558.26 transactions per second)!
-
-[Bounded] Took 10328 ms to match 1000000 transactions (96824.16 transactions per second)!
-
-[Bounded] Took 11242 ms to match 1000000 transactions (88952.14 transactions per second)!
-
-[Bounded] Took 10372 ms to match 1000000 transactions (96413.41 transactions per second)!
-
-[Bounded] Took 11200 ms to match 1000000 transactions (89285.71 transactions per second)!
-
-[Bounded] Took 10349 ms to match 1000000 transactions (96627.68 transactions per second)!
-
-[Bounded] Took 11215 ms to match 1000000 transactions (89166.29 transactions per second)!
-
-[Bounded] Took 10380 ms to match 1000000 transactions (96339.10 transactions per second)!
-
-[Bounded] Took 11216 ms to match 1000000 transactions (89158.34 transactions per second)!
-
-[Bounded] Took 10372 ms to match 1000000 transactions (96413.41 transactions per second)!
-
-[Bounded] Took 11186 ms to match 1000000 transactions (89397.45 transactions per second)!
-
-[Bounded] Took 10386 ms to match 1000000 transactions (96283.45 transactions per second)!
-
-[Bounded] Took 11243 ms to match 1000000 transactions (88944.22 transactions per second)!
-
-[Bounded] Took 10501 ms to match 1000000 transactions (95229.02 transactions per second)!
-
-[Bounded] Took 11105 ms to match 1000000 transactions (90049.52 transactions per second)!
-
-[Bounded] Took 10466 ms to match 1000000 transactions (95547.48 transactions per second)!
-
-[Bounded] Took 11361 ms to match 1000000 transactions (88020.41 transactions per second)!
+10094 99068.74
+11067 90358.72
+10380 96339.10
+10773 92824.65
+10194 98096.91
+11233 89023.41
+10302 97068.52
+11216 89158.34
+10342 96693.09
+11267 88754.76
+10292 97162.84
+11233 89023.41
+10347 96646.36
+11292 88558.26
+10328 96824.16
+11242 88952.14
+10372 96413.41
+11200 89285.71
+10349 96627.68
+11215 89166.29
+10380 96339.10
+11216 89158.34
+10372 96413.41
+11186 89397.45
+10386 96283.45
+11243 88944.22
+10501 95229.02
+11105 90049.52
+10466 95547.48
+11361 88020.41

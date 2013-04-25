@@ -13,6 +13,10 @@
 #define RULES_LEN (TRANSACTIONS_LEN + 1)
 #define RULE_BUF_SIZE ((5 + 1) * RULES_LEN + 1)
 
-#define BUFFER_SIZE 10000000
+#define THREAD_OUTPUT_BUF_SIZE ((2 << 17) * 5)
+#define THREAD_OUTPUT_BUF_MAX_LEN (THREAD_OUTPUT_BUF_SIZE - RULE_BUF_SIZE)
+
+#define MAX_CORES omp_get_num_procs()
+#define WORK_BATCH_SIZE 5000
 
 #endif

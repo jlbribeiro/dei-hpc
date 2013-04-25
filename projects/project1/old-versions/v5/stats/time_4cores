@@ -1,60 +1,30 @@
-
-[Bounded] Took 7592 ms to match 1000000 transactions (131717.58 transactions per second)!
-
-[Bounded] Took 7939 ms to match 1000000 transactions (125960.43 transactions per second)!
-
-[Bounded] Took 8205 ms to match 1000000 transactions (121876.89 transactions per second)!
-
-[Bounded] Took 7935 ms to match 1000000 transactions (126023.93 transactions per second)!
-
-[Bounded] Took 8257 ms to match 1000000 transactions (121109.35 transactions per second)!
-
-[Bounded] Took 7885 ms to match 1000000 transactions (126823.07 transactions per second)!
-
-[Bounded] Took 8255 ms to match 1000000 transactions (121138.69 transactions per second)!
-
-[Bounded] Took 7830 ms to match 1000000 transactions (127713.90 transactions per second)!
-
-[Bounded] Took 8310 ms to match 1000000 transactions (120336.93 transactions per second)!
-
-[Bounded] Took 7835 ms to match 1000000 transactions (127632.40 transactions per second)!
-
-[Bounded] Took 8247 ms to match 1000000 transactions (121256.20 transactions per second)!
-
-[Bounded] Took 7830 ms to match 1000000 transactions (127713.90 transactions per second)!
-
-[Bounded] Took 8253 ms to match 1000000 transactions (121168.05 transactions per second)!
-
-[Bounded] Took 7841 ms to match 1000000 transactions (127534.74 transactions per second)!
-
-[Bounded] Took 8127 ms to match 1000000 transactions (123046.62 transactions per second)!
-
-[Bounded] Took 7914 ms to match 1000000 transactions (126358.34 transactions per second)!
-
-[Bounded] Took 8205 ms to match 1000000 transactions (121876.89 transactions per second)!
-
-[Bounded] Took 7927 ms to match 1000000 transactions (126151.11 transactions per second)!
-
-[Bounded] Took 8195 ms to match 1000000 transactions (122025.61 transactions per second)!
-
-[Bounded] Took 8010 ms to match 1000000 transactions (124843.93 transactions per second)!
-
-[Bounded] Took 8199 ms to match 1000000 transactions (121966.08 transactions per second)!
-
-[Bounded] Took 7963 ms to match 1000000 transactions (125580.80 transactions per second)!
-
-[Bounded] Took 8194 ms to match 1000000 transactions (122040.50 transactions per second)!
-
-[Bounded] Took 7963 ms to match 1000000 transactions (125580.80 transactions per second)!
-
-[Bounded] Took 8178 ms to match 1000000 transactions (122279.27 transactions per second)!
-
-[Bounded] Took 7956 ms to match 1000000 transactions (125691.29 transactions per second)!
-
-[Bounded] Took 8158 ms to match 1000000 transactions (122579.05 transactions per second)!
-
-[Bounded] Took 7978 ms to match 1000000 transactions (125344.68 transactions per second)!
-
-[Bounded] Took 8144 ms to match 1000000 transactions (122789.77 transactions per second)!
-
-[Bounded] Took 7974 ms to match 1000000 transactions (125407.56 transactions per second)!
+7592 131717.58
+7939 125960.43
+8205 121876.89
+7935 126023.93
+8257 121109.35
+7885 126823.07
+8255 121138.69
+7830 127713.90
+8310 120336.93
+7835 127632.40
+8247 121256.20
+7830 127713.90
+8253 121168.05
+7841 127534.74
+8127 123046.62
+7914 126358.34
+8205 121876.89
+7927 126151.11
+8195 122025.61
+8010 124843.93
+8199 121966.08
+7963 125580.80
+8194 122040.50
+7963 125580.80
+8178 122279.27
+7956 125691.29
+8158 122579.05
+7978 125344.68
+8144 122789.77
+7974 125407.56

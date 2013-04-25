@@ -49,13 +49,13 @@ int bounded_search_last_rule_match(int value, int part_index, int begin, int end
 	return rules[begin - 1][part_index] == value ? begin : NOT_FOUND;
 }
 
-void match_bounded_search_transaction(int trans_id, int part_index, int begin, int end)
+void bounded_search_transaction_match(thread_output_buffer_t *thread_buffer, int trans_id, int part_index, int begin, int end)
 {
 	int value, zero_first, zero_last, value_first, value_last;
 
 	if (part_index == TRANSACTIONS_LEN) 
 	{
-		match_enqueue(trans_id, rules[begin][RULES_LEN - 1]);
+		output_match_to_thread_buffer(thread_buffer, trans_id, rules[begin][RULES_LEN - 1]);
 		return;
 	}
 
@@ -68,39 +68,35 @@ void match_bounded_search_transaction(int trans_id, int part_index, int begin, i
 	value_last = value_first != NOT_FOUND ? bounded_search_last_rule_match(value, part_index, value_first, end) : NOT_FOUND;
 
 	if (zero_last != NOT_FOUND)
-		match_bounded_search_transaction(trans_id, part_index + 1, zero_first, zero_last);
+		bounded_search_transaction_match(thread_buffer, trans_id, part_index + 1, zero_first, zero_last);
 
 	if (value_last != NOT_FOUND)
-		match_bounded_search_transaction(trans_id, part_index + 1, value_first, value_last);
+		bounded_search_transaction_match(thread_buffer, trans_id, part_index + 1, value_first, value_last);
 
 }
 
-void match_bounded_search()
+void bounded_search_match()
 {
 	int i;
-	int n_cores = omp_get_num_procs();
+	int n_cores = MAX_CORES;
 
-	pthread_t thread_worker_ids[9];
-
-	work_queue.index = 0;
-	pthread_mutex_init(&work_queue.mutex, NULL); /* TODO: move */
-
-	match_dequeuer_start();
+	pthread_t thread_worker_ids[MAX_CORES];
 
 	for (i = 0; i < n_cores; i++)
 		pthread_create(&thread_worker_ids[i], NULL, thread_match_bounded_search_worker, NULL);
 
-	match_dequeuer_join();
-	/*
-	 * for (i = 0; i < n_cores; i++)
-	 *	pthread_join(thread_worker_ids[i], NULL);
-	 */
+	for (i = 0; i < n_cores; i++)
+		pthread_join(thread_worker_ids[i], NULL);
 
 }
 
 void *thread_match_bounded_search_worker(void *arg)
 {
-	int trans_id;
+	int i;
+	int begin, end;
+
+	thread_output_buffer_t self_buffer;
+	self_buffer.length = 0;
 
 	while (true)
 	{
@@ -111,16 +107,21 @@ void *thread_match_bounded_search_worker(void *arg)
 				break;
 			}
 
-			trans_id = work_queue.index++;
+			begin = work_queue.index;
+			work_queue.index += WORK_BATCH_SIZE;
 		pthread_mutex_unlock(&work_queue.mutex);
 
-		match_bounded_search_transaction(trans_id, 0, 0, n_rules);
+		end = begin + WORK_BATCH_SIZE;
+		if (end > n_transactions)
+			end = n_transactions;
+
+		for (i = begin; i < end; i++)
+			bounded_search_transaction_match(&self_buffer, i, 0, 0, n_rules);
+
 	}
 
-	pthread_mutex_lock(&output.mutex);
-		output.closed = true;
-		pthread_cond_broadcast(&output.empty);
-	pthread_mutex_unlock(&output.mutex);
+	if (self_buffer.length)
+		output_thread_buffer_to_file(&self_buffer);
 
 	pthread_exit(0);
 }

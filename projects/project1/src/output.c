@@ -1,64 +1,55 @@
 #include "inc/output.h"
 #include "inc/globals.h"
 
-void match_dequeuer_join()
+void output_match_to_thread_buffer(thread_output_buffer_t *thread_buffer, int trans_id, int classification)
 {
-	pthread_join(thread_match_dequeuer_id, NULL);
-}
+	int i, j;
+	int val;
+	int part_index;
 
-void match_dequeuer_start()
-{
-	output.length = 0;
-	output.enqueue_index = 0;
-	output.dequeue_index = 0;
+	char str_int[5];
 
-	pthread_mutex_init(&output.mutex, NULL);
+	if (thread_buffer->length >= THREAD_OUTPUT_BUF_MAX_LEN)
+		output_thread_buffer_to_file(thread_buffer);
 
-	pthread_cond_init(&output.empty, NULL);
-	pthread_cond_init(&output.full, NULL);
-
-	output.closed = false;
-
-	pthread_create(&thread_match_dequeuer_id, NULL, thread_match_dequeuer, NULL);
-}
-
-void match_output(match_t *match)
-{
-	int i;
-
-	for (i = 0; i < TRANSACTIONS_LEN; i++)
+	for (part_index = 0; part_index < TRANSACTIONS_LEN; part_index++)
 	{
-		 printf("%d,", transactions[match->transaction_id][i]);
+		val = transactions[trans_id][part_index];
+		for (i = 0; val; i++)
+		{
+			str_int[i] = '0' + val % 10;
+			val /= 10;
+		}
 
-		#ifdef DEBUG_PRINT
-			fprintf(stderr, "%d,", transactions[match->transaction_id][i]);
-		#endif
+		for (j = 1; j <= i; j++)
+			thread_buffer->buffer[thread_buffer->length++] = str_int[i - j];
+
+		thread_buffer->buffer[thread_buffer->length++] = ',';
 	}
 
-	printf("%d\n", match->classification);
+	if (classification)
+	{
+		for (i = 0; classification; i++)
+		{
+			str_int[i] = '0' + classification % 10;
+			classification /= 10;
+		}
 
-	#ifdef DEBUG_PRINT
-		fprintf(stderr, "%d\n", match->classification);
-	#endif
+		for (j = 1; j <= i; j++)
+			thread_buffer->buffer[thread_buffer->length++] = str_int[i - j];
+
+	} else
+		thread_buffer->buffer[thread_buffer->length++] = '0';
+
+	thread_buffer->buffer[thread_buffer->length++] = '\n';
 }
 
-void match_enqueue(int transaction_id, int classification)
+void output_thread_buffer_to_file(thread_output_buffer_t *thread_buffer)
 {
-	pthread_mutex_lock(&output.mutex);
-		while (output.length == BUFFER_SIZE)
-			pthread_cond_wait(&output.full, &output.mutex);
-
-		output.buffer[output.enqueue_index].transaction_id = transaction_id;
-		output.buffer[output.enqueue_index].classification = classification;
-		output.enqueue_index = (output.enqueue_index + 1) % BUFFER_SIZE;
-		output.length++;
-
-		#ifdef DEBUG_PRINT
-			printf("[Thread%02d] added: [%06d,%06d]\n", thread_id, output.buffer[output.length - 1].transaction_id, output.buffer[output.length - 1].classification);
-		#endif
-
-		pthread_cond_signal(&output.empty);
-	pthread_mutex_unlock(&output.mutex);
+	pthread_mutex_lock(&output_mutex);
+		fwrite(thread_buffer->buffer, sizeof(char), thread_buffer->length, output_fd);
+		thread_buffer->length = 0;
+	pthread_mutex_unlock(&output_mutex);
 }
 
 void show_rules(int n)
@@ -91,34 +82,4 @@ void show_transactions(int n)
 	}
 
 	fprintf(stderr, "\n");
-}
-
-void *thread_match_dequeuer(void *arg)
-{
-	match_t match;
-
-	while (true)
-	{
-		pthread_mutex_lock(&output.mutex);
-			if (output.closed && output.length == 0)
-				pthread_exit(0);
-
-			while (output.length == 0)
-				pthread_cond_wait(&output.empty, &output.mutex);
-
-			match = output.buffer[output.dequeue_index];
-			output.dequeue_index = (output.dequeue_index + 1) % BUFFER_SIZE;
-			output.length--;
-
-			pthread_cond_signal(&output.full);
-		pthread_mutex_unlock(&output.mutex);
-
-		match_output(&match);
-
-		#ifdef DEBUG_PRINT
-			fprintf(stderr, "Just got: [%06d,%06d], still got %d unread\n", match.transaction_id, match.classification, msg_no);
-		#endif
-	}
-
-	pthread_exit(0);
 }

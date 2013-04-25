@@ -139,7 +139,7 @@ void sort_rules()
 	struct timeval start, end;
 
 	START_CHRONO;
-	qsort(rules, n_rules, sizeof(int) * RULES_LEN, cmp_rules);
+		qsort(rules, n_rules, sizeof(int) * RULES_LEN, cmp_rules);
 	STOP_CHRONO;
 
 	#ifdef DEBUG_PRINT

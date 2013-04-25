@@ -6,14 +6,11 @@
 #include "globals.h"
 #include "types.h"
 
-void match_dequeuer_join();
-void match_dequeuer_start();
-void match_enqueue(int transaction_id, int classification);
-void match_output(match_t *match);
+void output_match_to_thread_buffer(thread_output_buffer_t *thread_buffer, int trans_id, int classification);
+void output_match_to_thread_buffer(thread_output_buffer_t *thread_buffer, int trans_id, int classification);
+void output_thread_buffer_to_file(thread_output_buffer_t *thread_buffer);
 
 void show_rules(int n);
 void show_transactions(int n);
-
-void *thread_match_dequeuer(void *arg);
 
 #endif

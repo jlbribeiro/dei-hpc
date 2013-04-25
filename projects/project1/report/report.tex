@@ -6,6 +6,7 @@
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \usepackage{graphicx}
+\usepackage{caption}
 \usepackage{anysize}
 \usepackage{amsmath}
 
@@ -40,7 +41,7 @@
 \section{Introdução}
 \indent \indent A tecnologia chegou a um ponto em que se torna cada vez mais difícil conseguir aumentar a velocidade de um processador, por razões como a dissipação do calor por este gerado, ou pela barreira da velocidade da luz, uma vez que são cada vez necessários mais ciclos de relógio para aceder a um mesmo sítio da memória. Com isto torna-se cada vez mais importante ser capaz de explorar conceitos como \textit{multi-core} e \textit{HyperThreading}, tecnologias que permitem que se executem tarefas em paralelo.
 
-Neste projecto foi-nos apresentado um problema da vida real, em que o objectivo era conseguir processar um grande número de transacções bancárias, atribuindo a cada uma delas uma ou várias classificações, caso estas fizessem \textit{match} a uma ou mais regras. Como é claro para conseguirmos máximizar o \textit{throughput} foi necessário recorrer à paralelização.
+Neste projecto foi-nos apresentado um problema da vida real, em que o objectivo era conseguir processar um grande número de transacções bancárias, atribuindo a cada uma delas uma ou várias classificações, caso estas fizessem \textit{match} a uma ou mais regras. Como é claro, para conseguirmos maximizar o \textit{throughput} foi necessário recorrer à paralelização.
 
 Para se efectuar uma paralelização eficiente é necessário ter um bom algoritmo base, sendo que o primeiro passo passou por tentar escrever o melhor algoritmo possível, passando depois esse algoritmo para a sua versão paralela.
 
@@ -51,10 +52,10 @@ Durante este documento vão ser abordadas as metodologias utilizadas, explicando
 \subsection{Algoritmo}
 \indent \indent Começou por se usar o algoritmo mais básico de complexidade $O(m * n)$ com m sendo o número de regras e n o número de transacções, sendo que por discussão entre os membros do grupo se chegou à conclusão que utilizar um algoritmo com uma pesquisa semelhante à binária poderia apresentar bons resultados.
 
-Assim começou-se por se implementar a versão sequencial deste algoritmo, sendo que quando este já apresentava de um modo estável, começou-se a paralelização.
+Foi primeiro implementada a versão sequencial deste algoritmo sendo que, quando esta se mostrou correctamente implementada, procedeu-se à sua paralelização.
 
 \subsection{Linguagem e Paralelização}
-\indent \indent Optámos por utilizar \textit{C}, uma vez que o grupo se sentia a vontade com a linguagem, e também porque segundo o professor seria uma linguagem com que não iriamos ter bastantes problemas no segundo trabalho. Além disso outro grande factor a favor desta linguagem foi o facto de permitir o uso de \textit{OpenMP}, que começou por ser o método escolhido para implementar o paralelismo, passando depois a usar \textit{Pthreads}, como irá ser explicado mais a frente.
+\indent \indent Optámos por utilizar \textit{C}, uma vez que o grupo se sentia a vontade com a linguagem, e também porque, segundo o professor, seria uma linguagem com que não iríamos ter bastantes problemas no segundo trabalho. Além disso, outro grande factor a favor desta linguagem foi o facto de permitir o uso de \texttt{OpenMP}, que começou por ser o método escolhido para implementar o paralelismo, passando posteriormente a usar \texttt{pthreads}, como irá ser explicado mais a frente.
 
 \subsection{Ambiente de Testes}
 \indent \indent Os tempos apresentados neste relatório foram recolhidos no computador de um dos elementos do grupo, sendo que este seria o mais semelhante ao que o docente havia referido no enunciado (Core2-Duo @ 2.5GHz).
@@ -129,21 +130,21 @@ Começa-se por se iterar sobre a lista das transacções, depois pela lista das 
 \clearpage
 
 \section{Evolução}
-\indent \indent Começaram por se usar as directivas de \textit{Open MP} para utilizar paralelismo. 
+\indent \indent Começaram por se usar as directivas de \texttt{OpenMP} para utilizar paralelismo. 
 
-Na parte de leitura de ficheiros foram criadas \textit{sections} para que tanto o ficheiro das transacções como o ficheiro das regras pudessem ser carregados de modo paralelo. Nessa função começou por se fazer a leitura recorrendo ao \textit{fscanf()} algo que se demonstrou ser bastante lento, razão pela qual acabou por se recorrer à função \textit{fgets()} que em conjunto com um parser desenvolvido pelo grupo é capaz de ler o ficheiro cerca de 10 vezes mais rápido.
+Na parte de leitura de ficheiros foram criadas \texttt{sections} para que tanto o ficheiro das transacções como o ficheiro das regras pudessem ser carregados de modo paralelo. Nessa função começou por se fazer a leitura recorrendo ao \texttt{fscanf()}, algo que se demonstrou ser bastante lento, razão pela qual acabou por se recorrer à função \texttt{fgets()} que, em conjunto com um parser desenvolvido pelo grupo, é capaz de ler o ficheiro cerca de 10 vezes mais rápido.
 
-Numa segunda parte foi adicionada a directiva \textit{\#omp pragma parallel for} ao primeiro ciclo do algoritmo de \textit{bounded search}, sendo que esta alteração obrigou a que fosse implementada uma regra de acesso em exclusão mútua à função \textit{print}.
+Numa segunda parte foi adicionada a directiva \texttt{\#omp pragma parallel for} ao primeiro ciclo do algoritmo de \textit{bounded search}, sendo que esta alteração obrigou a que fosse implementada uma regra de acesso em exclusão mútua à função de \textit{output}.
 
-Nesta fase começou por se implementar um \textit{flockfile}, sendo que esta solução se tornou algo inviável uma vez que como cada \textit{thread} necessitava de imprimir para poder continuar a trabalhar, estas nunca utilizavam o processador a 100\%.
+Nesta fase começou por se implementar um \texttt{flockfile}, sendo que esta solução se tornou algo inviável uma vez que como cada \textit{thread} necessitava de imprimir para poder continuar a trabalhar, estas nunca utilizavam o processador a 100\%.
 
-Quase institivamente surgiu a ideia de optar por um esquema de produtor consumidor, em que as \textit{threads} estariam responsáveis por adicionar os \textit{matches} que descobrissem a uma \textit{queue} e existiria uma outra \textit{thread} que iria concorrentemente imprimindo os \textit{matches} que já se encontravam nessa queue.
+Quase institivamente surgiu a ideia de optar por um esquema de produtor/consumidor, em que as \textit{threads} estariam responsáveis por adicionar os \textit{matches} encontrados a uma \textit{queue}, de onde outra \textit{thread} iria concorrentemente imprimir os \textit{matches} que já se encontravam nessa \textit{queue}. Tal esquema foi implementado utilizando \texttt{pthread\_mutex}s e \texttt{pthread}s (para a \texttt{thread} de \textit{output}).
 
-Após tantas alterações achou-se que o código já estava bastante desorganizado, pelo que se achou ser altura de fazer um \textit{refactor} ao código, sendo que com isto se notou que todos os \textit{enqueue} e \textit{dequeue} estavam a criar cópias dos items, quando se podia estar a passar por referência e poupar o tempo de fazer a cópia. Com isso ganharam-se mais algumas transacções por segundo.
+Depois de uma análise cuidada de todas as chamadas de funções, estudou-se a possibilidade de passar por referência (ao invés de proceder à cópia de valores), de forma a obter maior performace. Tais modificações aplicaram-se essencialmente nas funções de \texttt{enqueue} e \texttt{dequeue}. Com esta modificação obteve-se um aumento considerável do número de transacções por segundo.
 
-Depois de observarmos as melhorias de performance que implementar \textit{pthreads} obteve, pensou-se em criar um esquema semelhante para as transacções, sendo que na vez de existirem vários \textit{producers} para apenas um \textit{consumer}, existiria apenas um \textit{producer} que seria a \textit{thread} que estaria a tratar dessa parte do input e vários \textit{consumers}, que seriam as \textit{threads} que estariam a processar cada uma das transacções.
+Depois de observarmos as melhorias de performance obtidas com a utilização de \textit{pthreads}, optou-se pela substituição completa do \texttt{OpenMP}. Para isso foi implementada uma \texttt{queue} de trabalho, de onde as \texttt{threads} poderiam obter as transacções a processar. Este esquema demonstrou-se bem sucedido, uma vez que a complexidade deste mecanismo é menor que a do funcionamento interno do \texttt{OpenMP}.
 
-Ainda assim achou-se que o \textit{output} seria o \textit{bottleneck} do nosso programa, razão pela qual se implementou um sistema que recorria ao preenchimento de um buffer e apenas depois disso se procederia à impressão desse mesmo buffer.
+Uma vez que o processamento continuava a ser prejudicado pelo \texttt{lock} efectuado na \texttt{queue} de \texttt{output} (e, consequentemente, ao ficheiro), decidimos abdicar da \texttt{thread} dedicada a \textit{output} para, recorrendo às primitivas de sincronização da biblioteca \texttt{pthreads}, tornar todas as \texttt{threads} produtoras. Para isto, decidimos utilizar um \texttt{buffer} por \texttt{thread}, onde estas faziam o seu \textit{output} à medida que procediam ao processamento. A escrita para este \textit{buffer} era feita de forma a substituir as chamadas à função de \texttt{fprintf}, uma vez que esta é bastante lenta. Cada vez que o \textit{buffer} individual de uma dada \texttt{thread} ficava cheio, esta fazia um \texttt{lock} ao ficheiro de \textit{output} e, utilizando \texttt{fwrite} (uma chamada mais rápida para \textit{output} para ficheiros) este era escrito e limpo. O valor do tamanho do \textit{buffer} interno de cada \texttt{thread} foi \texttt{fine-tuned} e relacionado directamente com o tamanho do \textit{work batch}. \textit{Work batch} consiste no \texttt{dequeue} de várias transacções em simultâneo, de forma a reduzir o número de chamadas \texttt{lock/unlock}.
 
 Em resumo segue-se uma tabela com as várias versões do programa e as alterações que foram efectuadas entre estas.
 \begin{table}[H]
@@ -161,7 +162,7 @@ Em resumo segue-se uma tabela com as várias versões do programa e as alteraç�
 
 \section{Resultados}
 \subsection{Medição dos Tempos}
-\indent \indent Tal como referido os tempos foram medidos no servidor indicado pelo docente, sendo que cada um dos valores apresentados foi alvo de tratamento estatístico. Isto é juntamente com cada um dos valores é apresentado um desvio padrão, que foi obtido através da análise estatistica de 30 medições.
+\indent \indent Tal como referido os tempos foram medidos no servidor indicado pelo docente, sendo que cada um dos valores apresentados foi alvo de tratamento estatístico. Isto é, juntamente com cada um dos valores é apresentado o desvio padrão, que foi obtido através da análise estatistica de 30 medições.
 
 \begin{table}[H]
 	\begin{tabular}{| c | c | c | c | c | c |} \hline
@@ -175,12 +176,44 @@ Em resumo segue-se uma tabela com as várias versões do programa e as alteraç�
 	\caption{Medições estatísticas dos tempos de execução das várias versões do programa.}
 \end{table}
 
+Para obtermos uma noção do ganho obtido com a paralelização, fez-se variar o número de \texttt{cores} em utilização (1 - 4) para a última versão. Apresenta-se em seguida o gráfico obtido:
+
+\begin{center}
+	\includegraphics[scale=0.38]{v5-tps-by-cores.pdf}
+	\captionof{figure}{Número de transacções por segundo pelo número de \texttt{cores} (versão 5).}
+	\label{fig:v5-tps-by-cores}
+\end{center}
+
+Os valores de tempo e speedup obtidos são de seguida apresentados:
+\begin{center}
+	\begin{tabular}{| c | c | c | c | c |}
+		\hline
+		 & \textbf{1 core} & \textbf{2 cores} & \textbf{3 cores} & \textbf{4 cores} \\ \hline
+		\textbf{Tempo (em ms)} & 17753.8 & 10765.13 & 9268.2 & 8043.3 \\ \hline
+		\textbf{Speedup} & 1.0 & 1.649 & 1.916 & 2.207 \\ \hline
+	\end{tabular}
+	\captionof{table}{Tempos e \texttt{speedup}s obtidos segundo o número de \texttt{cores} (versão 5).}
+	\label{tab:speedup}
+\end{center}
+
+
+\subsection{Análise de desempenho}
+\indent \indent Tal como podemos observar na tabela acima, foi conseguido um \textit{speedup} de apenas $2.207$ quando executado num processador de 4 núcleos (e de 1.6 quando utilizados 2 \texttt{threads}).
+
+Estes resultados fazem-nos considerar (e a análise de consumo de CPU ao longo da execução o comprova) que o programa continua a ser largamente \textit{IO bounded}. Apesar disso, existem ainda algumas melhorias que poderiam ser implementadas (não implementadas por falta de tempo).
+
+\begin{description}
+	\item [Paralelização do \textit{sort}] Fazer \textit{sort} ao \textit{array} das regras é uma das fases mais pesadas, visto que demora cerca de $1~s$. Uma versão paralela deste algoritmo poderia implicar descer, no caso da utilização de quatro \textit{cores}, $750~ms$ o que representaria um ganho substancial no número de transacções processadas por segundo.
+
+	\item [Transposição das regras] Pensou-se em transpor-se o \textit{array} das regras, uma vez que existem vários acessos a este, sem que nunca se tenha optimizado o acesso à \textit{cache}. Pensamos que a implementação desta melhoria poderia introduzir grandes melhorias, já que em experiências anteriores, vimos que um correcto uso desta memória pode melhorar os tempos de execução em  
+\end{description}
+
 \clearpage
 
 \section{Conclusão}
 \indent \indent Ao longo deste projecto, fomos iterando sobre um algoritmo, o qual submetemos a diferentes processos de modo a melhorar o seu desempenho. Uma vez mais ficou provado que normalmente, a solução mais simples é aquela que, mesmo demorando menos na fase de implementação e depuração de error, consome mais tempo na fase de execução.
 
-O primeiro ponto foi repensara o algoritmo em si. Em vez de efectuar pesquisar lineares optámos por implementar pesquisas binárias, o que só por si traz inúmeras vantagens.
+O primeiro ponto foi repensar o algoritmo em si. Em vez de efectuar pesquisar lineares optámos por implementar pesquisas binárias, o que só por si traz inúmeras vantagens.
 
 Contudo, rapidamente se chega a um momento onde as optimizações se tornam cada vez mais rebuscadas e menos significativas, o que, torna apenas o código mais ilegível sem que tenha efeitos práticos na sua \textit{performance}. É neste momento em que a paralelização aparece para dar um novo fôlego ao processo.
 
@@ -188,7 +221,7 @@ Denotou-se que apesar de trazer benefícios em grande partes dos casos, a parale
 
 Contudo, paralelizar a iteração sobre todas as entradas, assim como as leituras a partir de ficheiros diferentes, revelou-se uma mais valia que trouxe melhores resultados a seguir ao melhoramento da base do algoritmo. Isto prova que a paralelização, quando bem aplicada, potencia o uso eficiente dos recursos disponíveis.
 
-O manusamentede ficheiros acaba mesmo por ser o ponto fraco da maioria das aplicações, uma vez que as leituras e as escritas têm de ser na maioria dos casos sequenciais. Para contornar estes aspectos, usámos \textit{threads} para correr leituras simultâneamente de modo a diluir o tempo de escrita no restante tempo do algoritmo.
+O manuseamento de ficheiros acaba mesmo por ser o ponto fraco da maioria das aplicações, uma vez que as leituras e escritas têm de ser na maioria dos casos sequenciais. Para contornar estes aspectos, usámos \textit{threads} para correr leituras simultâneamente de modo a diluir o tempo de escrita no restante tempo do algoritmo.
 
 Para além deste aspecto, as próprias leituras podem ser melhoradas, uma vez que se podem ler grandes quantidades de dados numa única acção em vez de ler pequenos pedaços de muitas vezes.
 

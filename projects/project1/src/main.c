@@ -29,50 +29,58 @@ int n_transactions;
 int rules[MAX_SIZE][RULES_LEN];
 int transactions[MAX_SIZE][TRANSACTIONS_LEN];
 
-match_output_buffer_t output;
-pthread_t thread_match_dequeuer_id;
-
 work_queue_t work_queue;
+pthread_mutex_t output_mutex;
+
+FILE *output_fd;
 
 int main(int argc, char** argv)
 {
 	struct timeval start, end;
 
-	if (argc < 3)
+	if (argc < 4)
 	{
 		fprintf(stderr, "Wrong usage!\n");
-		fprintf(stderr, "%s <transactions_filename> <rules_filename>\n", argv[0]);
+		fprintf(stderr, "%s <transactions_filename> <rules_filename> <output_filename>\n", argv[0]);
 		exit(0);
 	}
 
 	START_CHRONO;
-	#pragma omp parallel sections
-	{
-		#pragma omp section
+		work_queue.index = 0;
+		pthread_mutex_init(&(work_queue.mutex), NULL);
+		pthread_mutex_init(&output_mutex, NULL);
+
+		#pragma omp parallel sections
 		{
-			n_transactions = read_transanctions(argv[1]);
+			#pragma omp section
+			{
+				n_transactions = read_transanctions(argv[1]);
+			}
+
+			#pragma omp section
+			{
+				n_rules = read_rules(argv[2]);
+			}
 		}
 
-		#pragma omp section
-		{
-			n_rules = read_rules(argv[2]);
-		}
-	}
+		output_fd = fopen(argv[3], "w");
 
-	sort_rules();
+		sort_rules();
 
-	#ifdef DEBUG_PRINT
-		fprintf(stderr, "\n");
-	#endif
-	/*/
-	show_transactions(n_transactions);
-	show_rules(n_rules);
-	/*/
+		#ifdef DEBUG_PRINT
+			fprintf(stderr, "\n");
+		#endif
+		/*/
+		show_transactions(n_transactions);
+		show_rules(n_rules);
+		/*/
 
-	/* match_naive(); */
-	/* match_bounded_search(); */
+		/* match_naive(); */
+		/* match_bounded_search(); */
 
-	match_bounded_search();
+		bounded_search_match();
+
+		fclose(output_fd);
 	STOP_CHRONO;
 
 	#ifdef TIME_MEASURES

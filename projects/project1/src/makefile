@@ -1,4 +1,4 @@
-CC=g++-4.6
+CC=g++-4.8
 HEADERS=inc/constants.h inc/globals.h inc/types.h inc/utils.h inc/input.h inc/output.h inc/naive.h inc/bounded_search.h
 OBJECTS=../bin/utils.o ../bin/input.o ../bin/output.o ../bin/naive.o ../bin/bounded_search.o
 FLAGS=-ansi -Wall -g -O4 -fopenmp -pthread -march=native
