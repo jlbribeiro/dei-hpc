@@ -205,7 +205,7 @@ Estes resultados fazem-nos considerar (e a análise de consumo de CPU ao longo d
 \begin{description}
 	\item [Paralelização do \textit{sort}] Fazer \textit{sort} ao \textit{array} das regras é uma das fases mais pesadas, visto que demora cerca de $1~s$. Uma versão paralela deste algoritmo poderia implicar descer, no caso da utilização de quatro \textit{cores}, $750~ms$ o que representaria um ganho substancial no número de transacções processadas por segundo.
 
-	\item [Transposição das regras] Pensou-se em transpor-se o \textit{array} das regras, uma vez que existem vários acessos a este, sem que nunca se tenha optimizado o acesso à \textit{cache}. Pensamos que a implementação desta melhoria poderia introduzir grandes melhorias, já que em experiências anteriores, vimos que um correcto uso desta memória pode melhorar os tempos de execução em  
+	\item [Transposição das regras] A transposição da matriz de regras poderia trazer ganhos substanciais por usufruir de \texttt{cache}. Isto porque o acesso à memória causado pelas funções de pesquisa da \texttt{lowerbound} e \texttt{upperbound} o faz por cada \texttt{slot} da regra (e não linearmente). Pensamos que a implementação desta melhoria poderia introduzir grandes melhorias já que, em experiências anteriores, vimos que um correcto uso desta memória pode melhorar os tempos de execução.
 \end{description}
 
 \clearpage
