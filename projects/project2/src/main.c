@@ -1,41 +1,104 @@
-#include <mpi.h>
+/*
+ * High Performance Computing
+ * June 2013
+ * Project 2
+ *
+ * João Paulo Batista Ferreira	2009113274	jpbat@student.dei.uc.pt	
+ * José Luís Baia Ribeiro		2008112181	jbaia@student.dei.uc.pt
+ */
+
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-#define MSG_BUFFER_SIZE 32
-#define N_PROCESSES 9
+#include <omp.h>
+#include <mpi.h>
 
-int main (int argc, char **argv)
+#include "inc/utils.h"
+
+#include "inc/constants.h"
+#include "inc/input.h"
+#include "inc/output.h"
+#include "inc/naive.h"
+#include "inc/bounded_search.h"
+
+#define TIME_MEASURES
+
+int n_rules;
+int n_transactions;
+
+int rules[MAX_SIZE][RULES_LEN];
+int transactions[MAX_SIZE][TRANSACTIONS_LEN];
+
+work_queue_t work_queue;
+pthread_mutex_t output_mutex;
+
+FILE *output_fd;
+
+int main(int argc, char** argv)
 {
-	char message[MSG_BUFFER_SIZE];
-	int my_rank;
+	int mpi_self_rank;
 
-	int dest_rank, master_rank = 0;
+	struct timeval start, end;
 
-	int message_tag = 1;
+	long input, sort, match, total;
 
-	MPI_Status status;
-	MPI_Init(&argc, &argv);
-	
-	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-	if (my_rank == master_rank)
+	if (argc < 4)
 	{
-		/* process 0 */
-		for (dest_rank = 1; dest_rank < N_PROCESSES; dest_rank++)
+		fprintf(stderr, "Wrong usage!\n");
+		fprintf(stderr, "%s <transactions_filename> <rules_filename> <output_filename>\n", argv[0]);
+		exit(0);
+	}
+
+	START_CHRONO;
+		MPI_Init(&argc, &argv);
+		MPI_Comm_rank(MPI_COMM_WORLD, &mpi_self_rank);
+
+		/* FIXME: avoiding multiple writes on the same file (placeholder main) */
+		if (mpi_self_rank != 0)
 		{
-			sprintf(message, "%d says: \"Hello, process %d!\"", master_rank, dest_rank);
-			MPI_Send(message, strlen(message) + 1, MPI_CHAR, dest_rank, message_tag, MPI_COMM_WORLD);
-
-			printf("[%d] Sent to %d: %s\n", my_rank, dest_rank, message);
+			MPI_Finalize();
+			return 0;
 		}
-	}
-	else
-	{
-		/* process 1-8 */
-		MPI_Recv(message, MSG_BUFFER_SIZE, MPI_CHAR, master_rank, message_tag, MPI_COMM_WORLD, &status);
-		printf("[%d] Received: %s\n", my_rank, message);
-	}
+
+		work_queue.index = 0;
+		pthread_mutex_init(&(work_queue.mutex), NULL);
+		pthread_mutex_init(&output_mutex, NULL);
+
+		#pragma omp parallel sections
+		{
+			#pragma omp section
+			{
+				n_transactions = read_transanctions(argv[1]);
+			}
+
+			#pragma omp section
+			{
+				n_rules = read_rules(argv[2]);
+			}
+		}
+	STOP_CHRONO;
+	input = GET_CHRONO;
+	fprintf(stderr, "Reading files:\t%ld (ms)\n", input);
+
+		output_fd = fopen(argv[3], "w");
+	START_CHRONO;
+		sort_rules();
+	STOP_CHRONO;
+	sort = GET_CHRONO;
+	fprintf(stderr, "Sorting:\t%ld (ms)\n", sort);
+
+	START_CHRONO;
+		bounded_search_match();
+	STOP_CHRONO;
+	match = GET_CHRONO;
+	fprintf(stderr, "Matching:\t%ld (ms)\n", match);
+
+	fclose(output_fd);
+
+	total = input + sort + match;
+
+	fprintf(stderr, "Total:\t\t%ld ms to match %d transactions (%.2lf transactions per second)!\n", total, n_transactions, n_transactions * 1000 / total * 1.0);
 
 	MPI_Finalize();
 
