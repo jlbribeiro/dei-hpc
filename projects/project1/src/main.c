@@ -38,6 +38,8 @@ int main(int argc, char** argv)
 {
 	struct timeval start, end;
 
+	long input, sort, match, total;
+
 	if (argc < 4)
 	{
 		fprintf(stderr, "Wrong usage!\n");
@@ -62,30 +64,28 @@ int main(int argc, char** argv)
 				n_rules = read_rules(argv[2]);
 			}
 		}
+	STOP_CHRONO;
+	input = GET_CHRONO;
+	fprintf(stderr, "Reading files:\t%ld (ms)\n", input);
 
 		output_fd = fopen(argv[3], "w");
-
+	START_CHRONO;
 		sort_rules();
-
-		#ifdef DEBUG_PRINT
-			fprintf(stderr, "\n");
-		#endif
-		/*/
-		show_transactions(n_transactions);
-		show_rules(n_rules);
-		/*/
-
-		/* match_naive(); */
-		/* match_bounded_search(); */
-
-		bounded_search_match();
-
-		fclose(output_fd);
 	STOP_CHRONO;
+	sort = GET_CHRONO;
+	fprintf(stderr, "Sorting:\t%ld (ms)\n", sort);
 
-	#ifdef TIME_MEASURES
-		fprintf(stderr, "\n[Bounded] Took %ld ms to match %d transactions (%.2lf transactions per second)!\n", GET_CHRONO, n_transactions, n_transactions * 1000 / (GET_CHRONO + 0.001));
-	#endif
+	START_CHRONO;
+		bounded_search_match();
+	STOP_CHRONO;
+	match = GET_CHRONO;
+	fprintf(stderr, "Matching:\t%ld (ms)\n", match);
+
+	fclose(output_fd);
+
+	total = input + sort + match;
+
+	fprintf(stderr, "Total:\t\t%ld ms to match %d transactions (%.2lf transactions per second)!\n", total, n_transactions, n_transactions * 1000 / total * 1.0);
 
 	return 0;
 }

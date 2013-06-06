@@ -13,6 +13,9 @@ clean:
 run:
 	mpirun -np 9 --hostfile hosts ${BUILD_DIR}/main
 
+deploy:
+	scp -r ../* jpbat@student.dei.uc.pt:/home/lei2009/jpbat/cad
+
 ${BUILD_DIR}/main: ${BUILD_DIR}/main.o ${HEADERS} ${OBJECTS}
 	${CC} ${FLAGS} ${BUILD_DIR}/main.o -o ${BUILD_DIR}/main
 

@@ -1,6 +1,6 @@
 CC=mpicc
 FLAGS=-Wall -ansi -lm -g
-EX=ex1
+EX=ex2
 
 all:
 	${CC} ${EX}.c -o ${EX} ${FLAGS}
