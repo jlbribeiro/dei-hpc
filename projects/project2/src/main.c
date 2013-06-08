@@ -17,6 +17,7 @@
 #include "inc/utils.h"
 
 #include "inc/constants.h"
+#include "inc/mpi_nodes.h"
 #include "inc/input.h"
 #include "inc/output.h"
 #include "inc/naive.h"
@@ -35,14 +36,11 @@ pthread_mutex_t output_mutex;
 
 FILE *output_fd;
 
+int mpi_self_rank;
+int mpi_n_processes;
+
 int main(int argc, char** argv)
 {
-	int mpi_self_rank;
-
-	struct timeval start, end;
-
-	long input, sort, match, total;
-
 	if (argc < 4)
 	{
 		fprintf(stderr, "Wrong usage!\n");
@@ -50,55 +48,14 @@ int main(int argc, char** argv)
 		exit(0);
 	}
 
-	START_CHRONO;
-		MPI_Init(&argc, &argv);
-		MPI_Comm_rank(MPI_COMM_WORLD, &mpi_self_rank);
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_self_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_n_processes);
 
-		/* FIXME: avoiding multiple writes on the same file (placeholder main) */
-		if (mpi_self_rank != 0)
-		{
-			MPI_Finalize();
-			return 0;
-		}
-
-		work_queue.index = 0;
-		pthread_mutex_init(&(work_queue.mutex), NULL);
-		pthread_mutex_init(&output_mutex, NULL);
-
-		#pragma omp parallel sections
-		{
-			#pragma omp section
-			{
-				n_transactions = read_transanctions(argv[1]);
-			}
-
-			#pragma omp section
-			{
-				n_rules = read_rules(argv[2]);
-			}
-		}
-	STOP_CHRONO;
-	input = GET_CHRONO;
-	fprintf(stderr, "Reading files:\t%ld (ms)\n", input);
-
-		output_fd = fopen(argv[3], "w");
-	START_CHRONO;
-		sort_rules();
-	STOP_CHRONO;
-	sort = GET_CHRONO;
-	fprintf(stderr, "Sorting:\t%ld (ms)\n", sort);
-
-	START_CHRONO;
-		bounded_search_match();
-	STOP_CHRONO;
-	match = GET_CHRONO;
-	fprintf(stderr, "Matching:\t%ld (ms)\n", match);
-
-	fclose(output_fd);
-
-	total = input + sort + match;
-
-	fprintf(stderr, "Total:\t\t%ld ms to match %d transactions (%.2lf transactions per second)!\n", total, n_transactions, n_transactions * 1000 / total * 1.0);
+	if (mpi_self_rank == MPI_RANK_MASTER)
+		mpi_nodes_master(argv);
+	else
+		mpi_nodes_slave(argv);
 
 	MPI_Finalize();
 

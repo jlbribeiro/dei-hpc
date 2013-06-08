@@ -101,7 +101,7 @@ void *thread_match_bounded_search_worker(void *arg)
 	while (true)
 	{
 		pthread_mutex_lock(&work_queue.mutex);
-			if (work_queue.index > n_transactions)
+			if (work_queue.index > work_queue.last_index)
 			{
 				pthread_mutex_unlock(&work_queue.mutex);
 				break;
@@ -112,8 +112,8 @@ void *thread_match_bounded_search_worker(void *arg)
 		pthread_mutex_unlock(&work_queue.mutex);
 
 		end = begin + WORK_BATCH_SIZE;
-		if (end > n_transactions)
-			end = n_transactions;
+		if (end > work_queue.last_index)
+			end = work_queue.last_index;
 
 		for (i = begin; i < end; i++)
 			bounded_search_transaction_match(&self_buffer, i, 0, 0, n_rules);
@@ -121,7 +121,7 @@ void *thread_match_bounded_search_worker(void *arg)
 	}
 
 	if (self_buffer.length)
-		output_thread_buffer_to_file(&self_buffer);
+		output_thread_buffer_to_master(&self_buffer);
 
 	pthread_exit(0);
 }

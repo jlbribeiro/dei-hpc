@@ -79,7 +79,7 @@ int read_rules(char *filename)
 	return i;
 }
 
-int read_transanctions(char *filename)
+int read_transactions(char *filename)
 {
 	struct timeval start, end;
 

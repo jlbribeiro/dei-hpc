@@ -19,4 +19,7 @@ extern pthread_mutex_t output_mutex;
 
 extern FILE *output_fd;
 
+extern int mpi_self_rank;
+extern int mpi_n_processes;
+
 #endif

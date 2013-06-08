@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <unistd.h>
+
 #include "inc/utils.h"
 
 long calc_time(struct timeval start, struct timeval end)
