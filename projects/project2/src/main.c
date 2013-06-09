@@ -27,8 +27,8 @@
 int n_rules;
 int n_transactions;
 
-int rules[MAX_SIZE][RULES_LEN];
-int transactions[MAX_SIZE][TRANSACTIONS_LEN];
+int rules[MAX_SIZE_RULES][RULES_LEN];
+int transactions[MAX_SIZE_TRANSACTIONS][TRANSACTIONS_LEN];
 
 work_queue_t work_queue;
 pthread_mutex_t output_mutex;

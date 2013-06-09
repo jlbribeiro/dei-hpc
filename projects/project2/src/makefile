@@ -17,11 +17,11 @@ all: ${PROGRAM}
 clean:
 	rm -R -f ${BUILD_DIR} ${OUTPUT_DIR}
 
-run:
+run: ${PROGRAM}
 	@mkdir -p ${OUTPUT_DIR}
 	mpirun -np 9 --hostfile hosts ${PROGRAM} /dataset/THE_PROBLEM/trans_day_0.csv /dataset/THE_PROBLEM/rules2M.csv ${OUTPUT_FILE}
 
-run-local:
+run-local: ${PROGRAM}
 	@mkdir -p ${OUTPUT_DIR}
 	mpirun -np 4 ${PROGRAM} ~/cad-dataset/THE_PROBLEM/trans_day_0.csv ~/cad-dataset/THE_PROBLEM/rules2M.csv ${OUTPUT_FILE}
 

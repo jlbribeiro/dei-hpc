@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <string.h>
 #include <mpi.h>
 
 #include "inc/mpi_nodes.h"
@@ -8,13 +10,26 @@
 #include "inc/utils.h"
 
 #include "inc/bounded_search.h"
+/*
+void *thread_mpi_nodes_master_match_outputter(void *arg)
+{
+	thread_output_matches_t *match_ptr = (thread_output_matches_t *) arg;
 
+	output_thread_matches_to_file(match_ptr);
+	free(match_ptr);
+
+	pthread_exit(0);
+}
+*/
 void mpi_nodes_master(char** argv)
 {
 	int i;
 
 	thread_output_matches_t matches[MPI_MAX_PROCESSES];
 	MPI_Request requests[MPI_MAX_PROCESSES];
+
+	/* pthread_t thread_id; */
+	thread_output_matches_t *match_ptr;
 
 	MPI_Status status;
 	int index;
@@ -39,8 +54,18 @@ void mpi_nodes_master(char** argv)
 			continue;
 		}
 
-		output_thread_matches_to_file(&matches[index]);
+		match_ptr = (thread_output_matches_t *) malloc (sizeof(thread_output_matches_t));
+		memcpy(match_ptr, &matches[index], sizeof(thread_output_matches_t));
+
 		MPI_Irecv(matches[index].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[index]);
+
+		#pragma omp task
+		{
+			output_thread_matches_to_file(match_ptr);
+			free(match_ptr);
+		}
+
+		/* pthread_create(&thread_id, NULL, thread_mpi_nodes_master_match_outputter, (void *) match_ptr); */
 
 		/*
 		 *	for (i = 0; i < n_cores; i++)
@@ -57,10 +82,19 @@ void mpi_nodes_slave(char** argv)
 	int transaction_begin_offset, transaction_end_offset;
 	int end_value;
 
-	n_rules = read_rules(RULES_FILENAME);
-	sort_rules();
+	#pragma omp parallel sections
+	{
+		#pragma omp section
+		{
+			n_transactions = read_transactions(TRANSACTIONS_FILENAME);
+		}
 
-	n_transactions = read_transactions(TRANSACTIONS_FILENAME);
+		#pragma omp section
+		{
+			n_rules = read_rules(RULES_FILENAME);
+			sort_rules();
+		}
+	}
 
 	if (n_transactions > mpi_n_processes)
 	{
