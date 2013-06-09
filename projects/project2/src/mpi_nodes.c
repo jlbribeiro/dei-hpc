@@ -1,26 +1,61 @@
+#include <mpi.h>
+
 #include "inc/mpi_nodes.h"
 
 #include "inc/globals.h"
 #include "inc/input.h"
+#include "inc/output.h"
 #include "inc/utils.h"
 
 #include "inc/bounded_search.h"
 
 void mpi_nodes_master(char** argv)
 {
-	n_rules = read_rules(RULES_FILENAME);
-	sort_rules();
+	int i;
 
-	/*
-		output_fd = fopen(OUTPUT_FILENAME, "w");
-		fclose(output_fd);
-	*/
+	thread_output_matches_t matches[MPI_MAX_PROCESSES];
+	MPI_Request requests[MPI_MAX_PROCESSES];
+
+	MPI_Status status;
+	int index;
+
+	pthread_mutex_init(&output_mutex, NULL);
+	output_fd = fopen(OUTPUT_FILENAME, "w");
+
+	n_transactions = read_transactions(TRANSACTIONS_FILENAME);
+
+	for (i = 1; i < mpi_n_processes; i++)
+		MPI_Irecv(matches[i - 1].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[i - 1]);
+
+	for (i = 1; i < mpi_n_processes; )
+	{
+		MPI_Waitany(mpi_n_processes - 1, requests, &index, &status);
+
+		matches[index].length = matches[index].matches[0];
+
+		if (!matches[index].length)
+		{
+			i++;
+			continue;
+		}
+
+		output_thread_matches_to_file(&matches[index]);
+		MPI_Irecv(matches[index].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[index]);
+
+		/*
+		 *	for (i = 0; i < n_cores; i++)
+		 *		pthread_join(thread_worker_ids[i], NULL);
+		 */
+	}
+
+	fclose(output_fd);
 }
 
 void mpi_nodes_slave(char** argv)
 {
 	int batch_size;
 	int transaction_begin_offset, transaction_end_offset;
+	int end_value;
 
 	n_rules = read_rules(RULES_FILENAME);
 	sort_rules();
@@ -50,8 +85,10 @@ void mpi_nodes_slave(char** argv)
 	work_queue.index = transaction_begin_offset;
 	work_queue.last_index = transaction_end_offset;
 	pthread_mutex_init(&(work_queue.mutex), NULL);
+	pthread_mutex_init(&output_mutex, NULL);
 
 	bounded_search_match();
 
-	/* TODO: send results */
+	end_value = 0;
+	MPI_Send(&end_value, 1, MPI_INT, MPI_RANK_MASTER, mpi_self_rank, MPI_COMM_WORLD);
 }

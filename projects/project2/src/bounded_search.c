@@ -49,13 +49,13 @@ int bounded_search_last_rule_match(int value, int part_index, int begin, int end
 	return rules[begin - 1][part_index] == value ? begin : NOT_FOUND;
 }
 
-void bounded_search_transaction_match(thread_output_buffer_t *thread_buffer, int trans_id, int part_index, int begin, int end)
+void bounded_search_transaction_match(thread_output_matches_t *thread_matches, int trans_id, int part_index, int begin, int end)
 {
 	int value, zero_first, zero_last, value_first, value_last;
 
 	if (part_index == TRANSACTIONS_LEN) 
 	{
-		output_match_to_thread_buffer(thread_buffer, trans_id, rules[begin][RULES_LEN - 1]);
+		output_match_to_thread_matches(thread_matches, trans_id, rules[begin][RULES_LEN - 1]);
 		return;
 	}
 
@@ -68,10 +68,10 @@ void bounded_search_transaction_match(thread_output_buffer_t *thread_buffer, int
 	value_last = value_first != NOT_FOUND ? bounded_search_last_rule_match(value, part_index, value_first, end) : NOT_FOUND;
 
 	if (zero_last != NOT_FOUND)
-		bounded_search_transaction_match(thread_buffer, trans_id, part_index + 1, zero_first, zero_last);
+		bounded_search_transaction_match(thread_matches, trans_id, part_index + 1, zero_first, zero_last);
 
 	if (value_last != NOT_FOUND)
-		bounded_search_transaction_match(thread_buffer, trans_id, part_index + 1, value_first, value_last);
+		bounded_search_transaction_match(thread_matches, trans_id, part_index + 1, value_first, value_last);
 
 }
 
@@ -95,8 +95,8 @@ void *thread_match_bounded_search_worker(void *arg)
 	int i;
 	int begin, end;
 
-	thread_output_buffer_t self_buffer;
-	self_buffer.length = 0;
+	thread_output_matches_t self_buffer;
+	self_buffer.length = 1; /* reserving space for the 0 index (length) */
 
 	while (true)
 	{
@@ -121,7 +121,7 @@ void *thread_match_bounded_search_worker(void *arg)
 	}
 
 	if (self_buffer.length)
-		output_thread_buffer_to_master(&self_buffer);
+		output_thread_matches_to_master(&self_buffer);
 
 	pthread_exit(0);
 }

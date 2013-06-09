@@ -3,7 +3,7 @@ FLAGS=-ansi -Wall -g -O4 -fopenmp -pthread -march=native
 
 INC_DIR=inc
 BUILD_DIR=../bin
-OUTPUT_DIR=../output
+OUTPUT_DIR=/tmp/cad-output
 
 PROGRAM=${BUILD_DIR}/main
 OUTPUT_FILE=${OUTPUT_DIR}/output.csv
@@ -23,7 +23,7 @@ run:
 
 run-local:
 	@mkdir -p ${OUTPUT_DIR}
-	mpirun -np 9 ${PROGRAM} ~/cad-dataset/THE_PROBLEM/trans_day_0.csv ~/cad-dataset/THE_PROBLEM/rules2M.csv ${OUTPUT_FILE}
+	mpirun -np 4 ${PROGRAM} ~/cad-dataset/THE_PROBLEM/trans_day_0.csv ~/cad-dataset/THE_PROBLEM/rules2M.csv ${OUTPUT_FILE}
 
 deploy:
 	scp -r ../src jpbat@student.dei.uc.pt:/home/lei2009/jpbat/cad

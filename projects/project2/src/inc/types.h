@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <pthread.h>
+#include <mpi.h>
 
 typedef struct match_t
 {
@@ -10,12 +11,12 @@ typedef struct match_t
 
 } match_t;
 
-typedef struct thread_output_buffer_t
+typedef struct thread_output_matches_t
 {
-	int buffer[THREAD_OUTPUT_BUF_SIZE];
+	int matches[THREAD_OUTPUT_MATCHES_SIZE];
 	int length;
 
-} thread_output_buffer_t;
+} thread_output_matches_t;
 
 typedef struct work_queue_t
 {

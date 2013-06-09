@@ -15,13 +15,14 @@
 #define RULES_LEN (TRANSACTIONS_LEN + 1)
 #define RULE_BUF_SIZE ((5 + 1) * RULES_LEN + 1)
 
-/* The following value MUST be even (transaction_id/classification pairs) */
-#define THREAD_OUTPUT_BUF_SIZE ((2 << 15) * 5)
-/* #define THREAD_OUTPUT_BUF_SIZE ((2 << 17) * 5) */
+/* The following value MUST be odd (transaction_id/classification pairs + array length on index 0) */
+#define THREAD_OUTPUT_MATCHES_SIZE ((2 << 12) * 5 + 1)
+#define THREAD_OUTPUT_MATCHES_BUFFER_SIZE (THREAD_OUTPUT_MATCHES_SIZE * RULE_BUF_SIZE)
 
 #define MAX_CORES omp_get_num_procs()
 #define WORK_BATCH_SIZE 5000
 
+#define MPI_MAX_PROCESSES 9
 #define MPI_RANK_MASTER 0
 
 #endif
