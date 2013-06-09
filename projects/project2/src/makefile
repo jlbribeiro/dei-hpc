@@ -1,5 +1,5 @@
 CC=mpicc
-FLAGS=-ansi -Wall -g -O4 -fopenmp -pthread -march=native
+FLAGS=-ansi -Wall -O4 -fopenmp -pthread -march=native
 
 INC_DIR=inc
 BUILD_DIR=../bin
@@ -14,14 +14,19 @@ OBJECTS=${SOURCES:%.c=${BUILD_DIR}/%.o}
 
 all: ${PROGRAM}
 
-clean:
-	rm -R -f ${BUILD_DIR} ${OUTPUT_DIR}
+clean: clean-program clean-output
 
-run: ${PROGRAM}
+clean-program:
+	rm -rf ${BUILD_DIR}
+
+clean-output:
+	rm -rf ${OUTPUT_DIR}
+
+run: ${PROGRAM} clean-output
 	@mkdir -p ${OUTPUT_DIR}
 	mpirun -np 9 --hostfile hosts ${PROGRAM} /dataset/THE_PROBLEM/trans_day_0.csv /dataset/THE_PROBLEM/rules2M.csv ${OUTPUT_FILE}
 
-run-local: ${PROGRAM}
+run-local: ${PROGRAM} clean-output
 	@mkdir -p ${OUTPUT_DIR}
 	mpirun -np 4 ${PROGRAM} ~/cad-dataset/THE_PROBLEM/trans_day_0.csv ~/cad-dataset/THE_PROBLEM/rules2M.csv ${OUTPUT_FILE}
 

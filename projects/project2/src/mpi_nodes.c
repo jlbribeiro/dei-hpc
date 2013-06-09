@@ -28,9 +28,6 @@ void mpi_nodes_master(char** argv)
 	thread_output_matches_t matches[MPI_MAX_PROCESSES];
 	MPI_Request requests[MPI_MAX_PROCESSES];
 
-	/* pthread_t thread_id; */
-	thread_output_matches_t *match_ptr;
-
 	MPI_Status status;
 	int index;
 
@@ -54,23 +51,8 @@ void mpi_nodes_master(char** argv)
 			continue;
 		}
 
-		match_ptr = (thread_output_matches_t *) malloc (sizeof(thread_output_matches_t));
-		memcpy(match_ptr, &matches[index], sizeof(thread_output_matches_t));
-
+		output_thread_matches_to_file(&matches[index]);
 		MPI_Irecv(matches[index].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[index]);
-
-		#pragma omp task
-		{
-			output_thread_matches_to_file(match_ptr);
-			free(match_ptr);
-		}
-
-		/* pthread_create(&thread_id, NULL, thread_mpi_nodes_master_match_outputter, (void *) match_ptr); */
-
-		/*
-		 *	for (i = 0; i < n_cores; i++)
-		 *		pthread_join(thread_worker_ids[i], NULL);
-		 */
 	}
 
 	fclose(output_fd);
@@ -92,9 +74,10 @@ void mpi_nodes_slave(char** argv)
 		#pragma omp section
 		{
 			n_rules = read_rules(RULES_FILENAME);
-			sort_rules();
 		}
 	}
+
+	sort_rules();
 
 	if (n_transactions > mpi_n_processes)
 	{
