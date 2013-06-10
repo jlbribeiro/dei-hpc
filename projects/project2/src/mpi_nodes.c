@@ -10,7 +10,7 @@
 #include "inc/utils.h"
 
 #include "inc/bounded_search.h"
-/*
+
 void *thread_mpi_nodes_master_match_outputter(void *arg)
 {
 	thread_output_matches_t *match_ptr = (thread_output_matches_t *) arg;
@@ -20,7 +20,7 @@ void *thread_mpi_nodes_master_match_outputter(void *arg)
 
 	pthread_exit(0);
 }
-*/
+
 void mpi_nodes_master(char** argv)
 {
 	int i;
@@ -30,6 +30,9 @@ void mpi_nodes_master(char** argv)
 
 	MPI_Status status;
 	int index;
+
+	pthread_t thread_id;
+	thread_output_matches_t *buf_cpy;
 
 	pthread_mutex_init(&output_mutex, NULL);
 	output_fd = fopen(OUTPUT_FILENAME, "w");
@@ -51,8 +54,11 @@ void mpi_nodes_master(char** argv)
 			continue;
 		}
 
-		output_thread_matches_to_file(&matches[index]);
+		buf_cpy = (thread_output_matches_t *) malloc (sizeof(thread_output_matches_t));
+		memcpy(buf_cpy, &matches[index], sizeof(thread_output_matches_t));
+
 		MPI_Irecv(matches[index].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[index]);
+		pthread_create(&thread_id, NULL, thread_mpi_nodes_master_match_outputter, (void *) buf_cpy);
 	}
 
 	fclose(output_fd);
