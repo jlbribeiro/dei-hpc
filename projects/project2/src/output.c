@@ -67,7 +67,15 @@ void output_thread_matches_to_file(thread_output_matches_t *thread_matches)
 		buffer[length++] = '\n';
 	}
 
-	fwrite(buffer, sizeof(char), length, output_fd);
+	#ifdef MASTER_MULTITHREADED
+		pthread_mutex_lock(&output_mutex);
+	#endif
+
+		fwrite(buffer, sizeof(char), length, output_fd);
+
+	#ifdef MASTER_MULTITHREADED
+		pthread_mutex_unlock(&output_mutex);
+	#endif
 }
 
 void output_thread_matches_to_master(thread_output_matches_t *thread_matches)

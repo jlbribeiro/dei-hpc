@@ -15,28 +15,34 @@ void mpi_nodes_master(char** argv)
 {
 	int i;
 
-	thread_output_matches_t matches;
+	thread_output_matches_t matches[MPI_MAX_PROCESSES];
+	MPI_Request requests[MPI_MAX_PROCESSES];
 
 	MPI_Status status;
+	int index;
 
 	pthread_mutex_init(&output_mutex, NULL);
 	output_fd = fopen(OUTPUT_FILENAME, "w");
 
 	n_transactions = read_transactions(TRANSACTIONS_FILENAME);
 
+	for (i = 1; i < mpi_n_processes; i++)
+		MPI_Irecv(matches[i - 1].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[i - 1]);
+
 	for (i = 1; i < mpi_n_processes; )
 	{
-		MPI_Recv(&matches.matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+		MPI_Waitany(mpi_n_processes - 1, requests, &index, &status);
 
-		matches.length = matches.matches[0];
+		matches[index].length = matches[index].matches[0];
 
-		if (!matches.length)
+		if (!matches[index].length)
 		{
 			i++;
 			continue;
 		}
 
-		output_thread_matches_to_file(&matches);
+		output_thread_matches_to_file(&matches[index]);
+		MPI_Irecv(matches[index].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[index]);
 	}
 
 	fclose(output_fd);
