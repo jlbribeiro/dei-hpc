@@ -14,7 +14,7 @@ def main():
 	avg_time = []
 	for i in range(8):
 
-		f = open("../stats/" + str(i+2) + "machines")
+		f = open("../stats/v1.0/" + str(i+2) + "machines")
 		times = f.readlines()
 		f.close()
 
