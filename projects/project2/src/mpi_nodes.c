@@ -11,16 +11,6 @@
 
 #include "inc/bounded_search.h"
 
-void *thread_mpi_nodes_master_match_outputter(void *arg)
-{
-	thread_output_matches_t *match_ptr = (thread_output_matches_t *) arg;
-
-	output_thread_matches_to_file(match_ptr);
-	free(match_ptr);
-
-	pthread_exit(0);
-}
-
 void mpi_nodes_master(char** argv)
 {
 	int i;
@@ -31,20 +21,17 @@ void mpi_nodes_master(char** argv)
 	MPI_Status status;
 	int index;
 
-	pthread_t thread_id;
-	thread_output_matches_t *buf_cpy;
-
 	pthread_mutex_init(&output_mutex, NULL);
 	output_fd = fopen(OUTPUT_FILENAME, "w");
 
 	n_transactions = read_transactions(TRANSACTIONS_FILENAME);
 
 	for (i = 1; i < mpi_n_processes; i++)
-		MPI_Irecv(matches[i - 1].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[i - 1]);
+		MPI_Irecv(matches[i].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[i]);
 
 	for (i = 1; i < mpi_n_processes; )
 	{
-		MPI_Waitany(mpi_n_processes - 1, requests, &index, &status);
+		MPI_Waitany(mpi_n_processes - 1, requests + 1, &index, &status);
 
 		matches[index].length = matches[index].matches[0];
 
@@ -54,11 +41,8 @@ void mpi_nodes_master(char** argv)
 			continue;
 		}
 
-		buf_cpy = (thread_output_matches_t *) malloc (sizeof(thread_output_matches_t));
-		memcpy(buf_cpy, &matches[index], sizeof(thread_output_matches_t));
-
+		output_thread_matches_to_file(&matches[index]);
 		MPI_Irecv(matches[index].matches, THREAD_OUTPUT_MATCHES_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &requests[index]);
-		pthread_create(&thread_id, NULL, thread_mpi_nodes_master_match_outputter, (void *) buf_cpy);
 	}
 
 	fclose(output_fd);
