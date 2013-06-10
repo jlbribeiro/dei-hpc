@@ -12,19 +12,23 @@ def avg(l):
 
 def main():
 	avg_time = []
-	for i in range(9):
+	for i in range(8):
 
-		f = open("stats/" + str(i+2) + "machines")
+		f = open("../stats/" + str(i+2) + "machines")
 		times = f.readlines()
 		f.close()
 
-		for i in range(len(times)):
-			times[i] = int(times[i][:-3])/1000
+		for j in range(len(times)):
+			times[j] = int(times[j][:-3])/1000
 
-		for i in range(5):
+		for j in range(5):
 			times.remove(max(times))
 
 		avg_time.append(avg(times))
+
+		print str(i+2) + ' is done!'
+
+	print avg_time
 
 	ppt.plot([i for i in range(2, 10)], avg_time, 'blue')
 	ppt.show()
