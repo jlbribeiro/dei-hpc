@@ -3,4 +3,5 @@
 !/makefile
 !/imgs/*
 !/scripts/*
-!/stats/*/*
+!/stats/v1.0/*
+!/stats/v2.0/*
