@@ -85,9 +85,7 @@ O node master (MPI\_ID = 0), é single threaded e é responsável por recolher d
 
 Todos os outros nodes têm os índices das transacções que devem tratar, sendo que cada vez que encontram um match vão enchendo um buffer, até que quando este estiver cheio o enviam ao master. 
 \subsubsection{V2.0}
-\indent \indent Tenho medo do que for para escrever aqui.
-
-Este algoritmo segue o mesmo principio que o anterior, sendo que a grande alteração é baseada no facto de a distribuição de trabalhos não ser cega. Ao invés disso cada node vai pedindo trabalho ao master, de modo a que haja um melhor balanceamento da carga de trabalho.
+\indent \indent Este algoritmo segue o mesmo principio que o anterior, sendo que a grande alteração é baseada no facto de na primeira versão serem utilizados \texttt{send} e \texttt{receive} síncronos, o que faz com que o processo master fique a espera de um \texttt{recv} para fazer a escrita para o ficheiro. Na segunda versão são utilizados \texttt{receives} assíncronos, o que leva a que em background o node master desbloqueie mal o \texttt{receive} desbloqueie. Esta versão é algo mais rápida porque o processo não fica parado a espera dos \texttt{receives}, o que faz com que os dados fiquem disponíveis mais rapidamente.
 \clearpage
 
 
@@ -95,8 +93,12 @@ Este algoritmo segue o mesmo principio que o anterior, sendo que a grande altera
 \indent \indent No primeiro projecto conseguiu-se atingir uma performance de 200000 transacções por segundo numa máquina com seis cores, sendo que nesta a performance do nosso melhor algoritmo não foi além de X. Existem várias razões que podem justificar estes resultados. Neste segundo projecto as nove máquinas a que temos acesso estão a ser virtualizadas, pelo que mesmo cada uma delas tendo o seu próprio sistema de ficheiros, nada garante que fisicamente os ficheiros não estão no mesmo disco rígido, havendo assim um possível \textit{bottleneck} nos acessos a disco. Outra razão que pode explicar estes resultados é o facto de a máquina master ser \textit{single threaded}, pelo que é perdido muito tempo em operações de \texttt{MPI IO}. Por fim o facto de haver alguma, ainda que pouca, latência nas comunicações feitas pela rede pode também ajudar a explicar a performance da nossa solução.
 
 \begin{figure}[h]
-	\includegraphics[keepaspectratio=true, width=0.6\textheight]{imgs/scalability.png}
-	\caption{Tempo de execução em função do número de nós.}
+	\includegraphics[keepaspectratio=true, width=0.4\textheight]{imgs/scalabilityv1.png}
+	\caption{V1 - Tempo de execução em função do número de nós.}
+\end{figure}
+\begin{figure}[h]
+	\includegraphics[keepaspectratio=true, width=0.4\textheight]{imgs/scalabilityv2.png}
+	\caption{V2 - Tempo de execução em função do número de nós.}
 \end{figure}
 \clearpage
 
