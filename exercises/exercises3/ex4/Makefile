@@ -1,2 +1,2 @@
 all:
-	gcc -Wall -fopenmp ex4.c -o ex4
+	gcc -Wall -fopenmp ex4.c -lm -o ex4
