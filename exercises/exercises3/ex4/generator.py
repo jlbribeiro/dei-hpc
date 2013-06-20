@@ -17,7 +17,7 @@ def generate(degree, n_tests):
 
 	f.write(str(n_tests) + '\n')
 	for i in xrange(n_tests):
-		f.write(str((random.random() - 0.5) * 2) + '\n')
+		f.write(str(random.random()) + '\n')
 
 	f.close()
 

@@ -6,6 +6,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 #include <sys/time.h>
 
 #include "inc/utils.h"
@@ -60,7 +62,7 @@ void read_input()
 		scanf("%lf", &tests[i]);
 }
 
-void naive_approach()
+void naive_approach(FILE *f)
 {
 	int i, j;
 	double result = 0;
@@ -70,45 +72,91 @@ void naive_approach()
 		for (j = 0; j < degree; j++) 
 			result += polynomial[j] * pow(tests[i], degree - j - 1);
 
-		// printf("%lf\n", result);
+		fprintf(f, "%lf\n", result);
 	}
 }
 
-void horner_approach()
+void horner_approach(FILE *f)
 {
 	int i, j;
 	double result = 0;
 
-	for (i = 0; i < n_tests; i++)
+	for (i = 0; i < n_tests; i++, result = 0)
 	{
-		result = 0;
+		#pragma omp parallel for private(j), reduction (+: result)
 		for (j = 0; j < degree; j++) 
 			result = result * tests[i] + polynomial[j];
 
-		// printf("%lf\n", result);
+		fprintf(f, "%lf\n", result);
 	}
+}
+
+void prefix_approach(FILE *f)
+{
+	int i, j;
+	double result = 0;
+
+	int *aux = (int*) malloc (degree * sizeof(int));
+	
+	aux[0] = 0;
+	for (i = 1; i < degree; i++)
+		aux[i] = aux[i-1] + polynomial[i];
+
+	for (i = 0; i < degree; i++)
+		printf("%d ", aux[i]);
+	printf("\n");
+
+	free(aux);
+}
+
+void evaluate(char *approach)
+{
+	FILE *f;
+	char filename[36];
+	struct timeval start, end;
+	
+	sprintf(filename, "output/%s_approach", approach);
+	printf("Starting: %s Approach\n", approach);
+	
+	f = fopen(filename, "w");
+
+	if (!strcmp("Naïve", approach))
+	{	
+		START_CHRONO;
+		naive_approach(f);
+		STOP_CHRONO;
+	}
+
+	else if (!strcmp("Horner", approach))
+	{	
+		START_CHRONO;
+		horner_approach(f);
+		STOP_CHRONO;
+	}
+
+	else if (!strcmp("Prefix", approach))
+	{	
+		START_CHRONO;
+		prefix_approach(f);
+		STOP_CHRONO;
+	}
+
+	printf("%s approach got %ld miliseconds to perfom %d tests in a polynomial with %d degrees!\n", approach, GET_CHRONO, n_tests, degree - 1);		
+	fclose(f);
 }
 
 int main(int argc, char** argv)
 {
-	struct timeval start, end;
-
 	read_input();
 
 	// show_polynomial();
 
+	evaluate("Naïve");
+	evaluate("Horner");
+	evaluate("Prefix");
 
-	printf("Starting: Naïve Approach\n");
-	START_CHRONO;
-	naive_approach();
-	STOP_CHRONO;
-	printf("Naïve approach got %ld miliseconds to perfom %d tests in a polynomial with %d degrees!\n", GET_CHRONO, n_tests, degree - 1);
+	free(polynomial);
+	free(tests);
 
-	printf("Starting: Horner Approach\n");
-	START_CHRONO;
-	horner_approach();
-	STOP_CHRONO;
-	printf("Horner approach got %ld miliseconds to perfom %d tests in a polynomial with %d degrees!\n", GET_CHRONO, n_tests, degree - 1);
-	
 	return 0;
 }
