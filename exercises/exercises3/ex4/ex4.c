@@ -11,7 +11,8 @@
 #include "inc/utils.h"
 
 int degree, n_tests;
-int *polynomial, *tests;
+int *polynomial;
+double *tests;
 
 void show_polynomial()
 {
@@ -53,23 +54,38 @@ void read_input()
 		scanf("%d", &polynomial[i]);
 
 	scanf("%d", &n_tests);
-	tests = (int*) malloc (n_tests * sizeof(int));
+	tests = (double*) malloc (n_tests * sizeof(double));
 
 	for (i = 0; i < n_tests; i++)
-		scanf("%d", &tests[i]);
+		scanf("%lf", &tests[i]);
 }
 
 void naive_approach()
 {
 	int i, j;
-	unsigned long long result = 0;
+	double result = 0;
 
 	for (i = 0; i < n_tests; i++, result = 0)
 	{
 		for (j = 0; j < degree; j++) 
 			result += polynomial[j] * pow(tests[i], degree - j - 1);
 
-		printf("%llu\n", result);
+		// printf("%lf\n", result);
+	}
+}
+
+void horner_approach()
+{
+	int i, j;
+	double result = 0;
+
+	for (i = 0; i < n_tests; i++)
+	{
+		result = 0;
+		for (j = 0; j < degree; j++) 
+			result = result * tests[i] + polynomial[j];
+
+		// printf("%lf\n", result);
 	}
 }
 
@@ -81,10 +97,18 @@ int main(int argc, char** argv)
 
 	// show_polynomial();
 
+
+	printf("Starting: Naïve Approach\n");
 	START_CHRONO;
 	naive_approach();
 	STOP_CHRONO;
-
 	printf("Naïve approach got %ld miliseconds to perfom %d tests in a polynomial with %d degrees!\n", GET_CHRONO, n_tests, degree - 1);
+
+	printf("Starting: Horner Approach\n");
+	START_CHRONO;
+	horner_approach();
+	STOP_CHRONO;
+	printf("Horner approach got %ld miliseconds to perfom %d tests in a polynomial with %d degrees!\n", GET_CHRONO, n_tests, degree - 1);
+	
 	return 0;
 }
