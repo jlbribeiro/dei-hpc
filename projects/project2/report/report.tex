@@ -3,6 +3,8 @@
 \usepackage[portuguese]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{algorithmic}
+\usepackage{algorithm}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{anysize}
@@ -10,108 +12,133 @@
 
 \usepackage{hyperref}
 \hypersetup{
-	pdftitle = {CAD - TP2}
-	,pdfauthor = {João Ferreira \& José Ribeiro Departamento de Engenharia Informática Universidade De Coimbra \texttt{jpbat@student.dei.uc.pt |  jbaia@student.dei.uc.pt}}
+	pdftitle = {[CAD] TP2: Parallel Programming for Clusters using MPI}
+	,pdfauthor = {João Ferreira \& José Ribeiro\\ Departamento de Engenharia Informática\\ Universidade De Coimbra\\ \texttt{jpbat@student.dei.uc.pt | jbaia@student.dei.uc.pt}}
 	,pdfborder = {0 0 0}
 }
 
-\title{Computação de Alto Desempenho - Trabalho Prático 2}
+\title{High-performance Computing \\ TP2: Parallel Programming for Clusters using MPI}
 \author{João Ferreira \& José Ribeiro\\
 		Departamento de Engenharia Informática\\
 		Universidade de Coimbra\\
 		\texttt{jpbat@student.dei.uc.pt | jbaia@student.dei.uc.pt}\\
 		\texttt{2009113274 | 2008112181}}
-\date{Junho 2013}
+\date{Abril 2013}
 
 \marginsize{3.5cm}{3.5cm}{3cm}{3cm}
 
 \begin{document}
 \maketitle
 
-\clearpage
+\cleardoublepage
 
 \tableofcontents
-\clearpage
+\cleardoublepage
 
 \setlength{\parindent}{1cm}
 \setlength{\parskip}{0.3cm}
 
-\section{Introdução}
-\indent \indent Tal como foi referido no relatório anterior, é cada vez mais díficil aumentar a frequência dos processadores, pelo que se verificou um aumento do número de processadores por computador. No entanto, como seria fácil de prever, também este aumento tem uma barreira, pelo que existiu a necessidade de apostar em computação distribuída.
-
-Assim surge o conceito de \textit{cluster}, um aglomerado de computadores que estão ligados a um \textit{switch} de alta velocidade, o que lhes permite fazer computação distribuída através de, por exemplo, passagem de mensagens entre eles.
-
-Neste contexto surge a biblioteca \textit{Message Passing Interface}, que nos foi apresentada pelo docente nas aulas teóricas e que vai ser por nós utilizada neste projecto.
-
-Iremos detalhar o algoritmo utilizado, após o qual passaremos à análise dos resultados dos testes efectuados.
+\section{Introduction}
 \clearpage
 
-\section{Ambiente de Testes}
+\section{Algorithms}
+\subsection{Sequential solution}
+\indent \indent Esta solução nunca foi implementada senão para fins de relatório, uma vez que se trata do projecto anterior modificado para utilizar apenas uma \texttt{thread}.
+
+Resumidamente: utilizando o algoritmo do projecto anterior, são feitos \textit{matches} a todas as transacções utilizando um esquema de \textit{matching} recursivo parcial, onde cada transacção segundo as regras que lhe fazem \textit{match} directo e segundo as regras que lhe fazem \textit{match} através de \textit{wildcard} (o número 0); são calculados a cada iteração do algoritmo os limites superior e inferior para estas duas regiões, de forma a excluir o máximo número de regras no menor tempo possível.
+
+\subsection{Parallel solutions}
+\subsubsection{Single node, multi-threaded}
+\indent \indent Esta solução trata-se, na realidade, do \textit{Project 1}. Utilizando a solução sequencial, acrescentam-se mecanismos de \texttt{threading}, de forma a obter velocidade de processamento e diminuir o \textit{bottleneck} de fazer \textit{locking} (uma vez que cada thread possui um \texttt{buffer} individual para escrita antes de escrever para ficheiro), proteger a escrita simultânea para ficheiro, entre outros.
+
+\subsubsection{Multi-node, multi-threaded}
+\indent \indent Recorrendo à \texttt{framework MPI}, foram desenvolvidas várias soluções \textit{multi-node}, onde se segue um modelo \textit{master}/\textit{slaves}.
+
+Uma vez que se assume que, no final da execução, pelo menos um dos nós terá o resultado final das classificações, esse nó (\textit{master}) é o nó central de comunicação, e aquele que terá de receber todos os resultados.
+
+Os nós \textit{slave} são responsáveis por classificar um subconjunto do total das transacções e enviar ao \textit{master} o resultado dessas classificações. Uma vez que conhecem o seu \texttt{MPI rank}, calculam o seu subconjunto utilizando \textit{offsets} sob o total das regras; a correcção da divisão inteira no número total de transacções prevê que o nó com o índice superior fica com o resto da divisão inteira.
+
+Uma vez que, neste modelo, apenas um dos processos escreve para disco, o \texttt{buffer} de ASCII existente para cada \textit{thread} deixa de existir, dando lugar a um buffer de pares de inteiros: \texttt{transaction\_id}/\texttt{classification}. Do lado dos nós \textit{slave}, o envio foi sempre recorrendo à função \texttt{MPI\_Send} (isto é, versão síncrona); esta escolha prende-se com a necessidade de garantir controlo total sobre a memória alocada, uma vez que versões não síncronas (\textit{buffered}, \textit{async}) levantam problemas relacionados com a possível utilização do \texttt{buffer}. Ainda que a versão \textit{buffered} dê garantias da possiblidade de utilização do \texttt{buffer}, existe a necessidade de alocar internamente um do mesmo tamanho para proceder ao envio; de forma a simplificar a implementação e de forma a garantir o não esgotamento de memória, foi escolhido usar a versão síncrona e melhorar ao nível do \textit{master} (bem como as constantes relacionadas com o tamanho do \texttt{buffer} de cada \texttt{thread} dos nós \textit{slave}, o tamanho do \textit{batch\_size} por \texttt{thread} [o número de transacções que uma \texttt{thread} aloca para si mesma para proceder a uma classificação], entre outras).
+
+Note-se que tanto o \textit{master} como os \textit{slaves} lêem o ficheiro de regras em simultâneo; apenas os \textit{slaves} lêem o ficheiro de transacções, e fazem-no paralelamente à leitura anterior.
+
+Seguem-se agora as descrições das versões produzidas; na realidade foram produzidas mais versões (as combinações possíveis abaixo (ex.: \texttt{MPI\_Recv} usando \texttt{pthreads}), mas não as consideramos relevantes para análise.
+\begin{description}
+	\item[\textit{Master} using \texttt{MPI\_Recv}, single-core processing] \hfill \\
+		A primeira versão desenvolvida foi utilizando recepção síncrona de resultados provenientes de qualquer \textit{slave}; após a sua conversão em memória para ASCII (isto é, cada par \texttt{transaction\_id}/\texttt{classification} deu origem a uma linha de $11$ inteiros no ficheiro de \textit{output}).
+
+	\item[\textit{Master} using \texttt{MPI\_Irecv}, single-core processing] \hfill \\
+		Utilizando a versão mencionada acima, modificou-se o projecto de forma a recorrer à utilização de \texttt{non-blocking IO}, utilizando para isso \texttt{MPI\_Irecv} e \texttt{MPI\_Waitany}. Após o desbloqueio da chamada \texttt{MPI\_Waitany}, o \textit{master} transformava os resultados e escrevia para disco. Nesta altura surge a necessidade de experimentar formas de utilizar os dois \textit{cores} da máquina.
+
+	\item[\textit{Master} using \texttt{MPI\_Irecv}, multi-core processing using \texttt{pthreads}] \hfill \\
+		Uma vez que o \textit{master} possui dois \texttt{cores}, pareceu imprescindível utilizá-los de forma a que um tratasse da recepção de dados (nunca os dois, uma vez que a versão instalada não permitia multi-threading) e o outro da sua transformação e escrita para disco. Para tal, implementou-se um simples sistema recorrendo às funções de \texttt{malloc}, \texttt{memcpy} e \texttt{pthread\_create}. Nesta versão passou a existir um \texttt{lock} em torno da escrita para ficheiro (discutimos as suas consequências abaixo).
+
+	\item[\textit{Master} using \texttt{MPI\_Irecv}, multi-core processing using \texttt{\#pragma omp task}] \hfill \\
+		Na mesma óptima da abordagem anterior, subsituiu-se a utilização de \texttt{pthread\_create} pela utilização de \texttt{OMP tasks}.
+\end{description}
+\clearpage
+
+\section{Testing environment}
 \indent \indent Os testes foram executados nos servidores disponibilizados pelo professor, sendo que pelo que nos foi possível constatar estas são as especificações técnicas de cada um deles:
 \begin{description}
-	\item [Processador] Intel(R) Xeon(R) CPU E5405 @ 2.00GHz, que possui 2 cores e 12MB de L2 Cache.
+	\item [Processador] Intel(R) Xeon(R) CPU E5405 @ 2.00GHz, que possui 2 cores e 6MB de L2 Cache.
 	\item [Memória RAM] 3.7GB.
 	\item [Sistema Operativo] CentOS 6.3.
 \end{description}
 
-Ao longo do período de desenvolvimento fomo-nos deparando com alguns problemas no ambiente de testes; a maior parte deles causaram falhas silenciosas que demoraram, pela sua natureza, a serem detectadas.
+Durante o desenvolvimento do trabalho surgiram alguns problemas relacionados com este ambiente; alguns destes problemas eram falhas ``silenciosas'', que nos levaram a crer durante algum tempo que poderiam existir problemas de fundo com a nossa implementação.
 
-O primeiro destes problemas foi não possuirmos espaço na nossa zona pessoal para conseguir guardar o ficheiro de output. Para o solucionar foi necessário que primeiro conseguissemos perceber que o erro não era causado por falha do envio de mensagens e, acima de tudo, que não era um erro de lógica no algoritmo, pelo que foi necessário fazer \textit{debug} da nossa solução, algo que não é de todo trivial num programa distribuído. Após termos descoberto a causa da escrita incompleta, resolvemos o problema recorrendo à directoria \texttt{/tmp/} do sistema, onde não existem restrições ao nível de permissões de escrita ou espaço.
+Referimo-nos à falta de espaço na área pessoal para escrita (o que nos levava a produzir ficheiros incompletos, sintoma também semelhante a um mau \textit{gathering} dos resultados).
 
-Outro problema foi causado pelos próprios estudantes, quando por vezes se iniciavam \texttt{runs} sem que se verificasse se estava alguém a utilizar as máquinas. Para além disto nos levar a ter tempos errados de execução, causava falhas de segmentação, pois não teríamos disponível toda a memória de que precisávamos. Para resolver este problema utilizou-se o \texttt{htop} para que se pudesse controlar tanto os níveis de utilização dos \textit{CPU} das 9 máquinas, como os utilizadores que estariam a utilizar de modo a que se pudesse racionalizar o tempo exclusivo de processamento.
-
-Um dos principais problemas que tivemos quando se tentou fazer \textit{fine tune} de alguns valores foram as consideráveis variações nos tempos de execução, algo que não faziamos ideia do porquê de acontecer. Eventualmente concluímos estar relacionado com o reescrever do ficheiro, que obrigava o sistema operativo a apagá-lo internamente; isto fazia com que o processo de remoção fosse contabilizado no tempo de execução. Assim, modificámos o ficheiro de \texttt{makefile} de forma a remover o ficheiro de \textit{output} anterior antes de executar, o que nos permitiu subtrair cerca de \textbf{2 segundos}.
+Outro relacionado com o \textit{overhead} sentido aquando da escrita sobre um ficheiro já existente. Com a remoção prévia do ficheiro (antes de qualquer \textit{run}) constatámos um decréscimo de \textbf{2 segundos}, para além de ser perceptível uma muito menor oscilação dos tempos obtidos. A nossa dedução é que o \texttt{rewrite} obrigue a uma remoção ao nível de sistema, o que poderia causar estas oscilações (e tempo); é possível também estar relacionado com o \textit{setup} de \textit{hardware} do ambiente de testes, uma vez que se trata duma situação virtualizada (mesmo ao nível do sistema de ficheiros).
 \clearpage
 
-\section{Abordagens}
-\subsection{Generalidades}
-\indent \indent Uma vez que no primeiro projecto criámos aquilo que achámos ser a melhor solução possível para resolver o problema, a nova abordagem consiste em correr a versão 1.0 do projecto em cada uma das máquinas, sendo que, em cada uma dessas máquinas, o processo de \textit{matching} se aplica às transacções que lhe correspondem (obtidas a partir do cálculo relativo ao seu offset).
+\section{Results}
+\subsection{Time measures and performance analysis}
+\subsubsection{Sequential solution}
+\indent \indent A versão sequencial do \textit{Project 1} (feita apenas para comparação) obteve como resultados médios uma leitura de ficheiros em $901.5ms$ (esta paralela), um ordenamento das regras e transacções em $1575.5ms$ e o \textit{matching} em $25588ms$, perfazendo um total de $28065ms$.
 
-Após isto, foi necessário fazer \textit{fine tune} a alguns valores, como por exemplo o tamanho ideal do \textit{buffer} de envio em cada uma das máquinas, ou qual a dimensão do \textit{batch} de transacções que garantia uma boa relação com o tamanho do \textit{buffer} e, ao mesmo tempo, minimizava o tempo perdido no \texttt{lock}. A maior parte deste \textit{fine-tune} ocorreu enquanto desconhecíamos o último problema mencionado na secção anterior, pelo que modificações bastante profundas no código não produziram (aparentemente, na altura) qualquer alteração no tempo obtido, uma vez que estes variavam cerca de 25\% em \textit{runs} consecutivos. Viemos mais tarde a descobrir que essas variações ocorriam entre a execução após um \texttt{make clean} e a consecutiva a essa, uma vez que fizemos a rotina limpar a pasta de \textit{output}. Chegámos ao valor ideal de 2500 transacções por \textit{thread}.
+\subsubsection{Single node, multi-threaded}
+\indent \indent O \textit{Project 1} (corrido apenas para comparação) obteve como resultados médios numa máquina uma leitura de ficheiros em $899ms$ (semelhante ao anterior, uma vez que é feita paralelamente), um ordenamento das regras e transacções em $1591ms$ (semelhante também, pelas mesmas condições) e o \textit{matching} em $15681ms$, perfazendo um total de $28065ms$. Assim, nestas máquinas, o algoritmo do projecto 1 (com uma performance aproximada de 200000 transacções por segundo) passa a ter uma performance a rondar as 64000 transacções por segundo.
 
-Durante todos os testes efectuados verificou-se com o auxílio de ferramentas como o \textit{htop}, se existiriam mais alunos a utilizar os servidores, e o nível de ocupação dos vários processadores das máquinas utilizadas, de modo a que houvesse certezas sobre a validade dos resultados.
-\begin{figure}[h]
-	\includegraphics[keepaspectratio=true, width=0.4\textheight]{imgs/ocupacao.png}
-	\caption{Monitorização do nível de ocupação dos CPUs.}
-\end{figure}
+\subsubsection{Multi-node, multi-threaded}
+\indent \indent Analisando os aspectos comuns, os tempos de leitura do ficheiro de transacções rondam os $523ms$. Os tempos de ordenamento das regras são bastante diferentes para os diferentes nodes, sendo que variam em mais de $1s$; a sua média foi de $1600ms$.
 
-\subsection{Arquitectura}
-O algoritmo consiste na utilização de um nó \texttt{master} que recebe todos os resultados por parte dos seus \texttt{slaves} e que os escreve para disco.
+Antes de analisar em detalhe os resultados, alguns números que merecem ser tidos em consideração (para avaliar o impacto da abordagem tida pelo projecto 2). Utilizando o \textit{Project 1}, foram realizados 30 testes a 30 amostras aleatórias de 125000 transacções cada. O objectivo foi analisar quanto demoraria, em média, um \textit{node} a processar um oitavo (considerando 8 \textit{slaves}, que não é o melhor resultado para o projecto) das transacções sem que tivesse de comunicar com qualquer outro \textit{node}. É de notar, no entanto, que estes valores reflectem a leitura de um oitavo das transacções (o que não acontece no caso real, em que os \textit{slaves} lêem \textbf{todas} as transacções e processam apenas um oitavo). Os resultados obtidos reflectem um valor total de execução de, em média, $\mathbf{4300ms}$.
 
-Todos os nós \texttt{slave} calculam quais os índices de início e de fim das transacções que lhe são correspondentes a partir do seu \texttt{MPI rank}. Após isso, colocam esses índices na fila e correm as suas threads de forma a que estas obtenham trabalho e processem as transacções. Tal como no trabalho anterior, cada thread possui um buffer próprio para onde escreve sem ficar bloqueado em \textit{locks}. No entanto, este \textit{buffer}, ao contrário do projecto anterior, não contém as strings ASCII já representantes da forma final que ficaria no ficheiro, mas sim os pares \texttt{transaction\_id}/classificação. Fazemo-lo desta forma para minimizar o tráfego na rede.
+Apresentam-se os gráficos dos resultados para as primeiras duas versões; relaciona o tempo com o número de \textit{cores}.
 
-Assim que este buffer se encontra completo, é necessário enviá-lo ao \texttt{master node} de forma a que este os escreva para ficheiro. Tal é feito recorrendo a um \texttt{MPI\_Send}. Usámos a chamada síncrona uma vez que necessitávamos de garantir que existia memória suficiente, enquanto que a versão \textit{buffered} consumia bastante memória (uma vez que os pedidos iam acumulando dada a velocidade de processamento do \texttt{master node} ser limitada).
+\begin{center}
+	\includegraphics[scale=0.38]{imgs/scalabilityv1.png}
+	\captionof{figure}{\textit{Master} using \texttt{MPI\_Recv}, single-core processing: execution time in order to the number of nodes.}
+	\label{fig:mpi-recv-exec-time-by-cores}
+\end{center}
 
-O \texttt{master node} encontra-se bloqueado na recepção dos resultados e processa-a, transformando os pares de inteiros em representações ASCII em memória, após o qual as escreve para disco num único \texttt{write}.
+\begin{center}
+	\includegraphics[scale=0.38]{imgs/scalabilityv2.png}
+	\captionof{figure}{\textit{Master} using \texttt{MPI\_Irecv}, single-core processing: execution time in order to the number of nodes.}
+	\label{fig:mpi-irecv-exec-time-by-cores}
+\end{center}
 
-\subsubsection{V1.0}
-\indent \indent Numa primeira versão, utilizámos \texttt{MPI\_Recv} do lado do \texttt{master}, de forma a receber sincronamente e processar todos os dados. Esta era a abordagem mais simples; no entanto, a recepção consome tempo que poderia ser usado no processamento. Assim procedeu-se à segunda abordagem.
+\indent \indent Para as duas últimas soluções não existem gráficos para cada número de \textit{nodes}; no entanto, para as soluções com \texttt{OMP tasks} o tempo rondou os $6300ms$, enquanto que com \texttt{pthread\_create} o tempo demorado rondou aproximadamente os $6200$ para 9 máquinas; a solução \textit{single thread} de Irecv obteve $5800ms$ em média, com o seu melhor resultado de $\mathbf{5000ms}$ (melhor global) para 5 máquinas (isto é, 4 \textit{slaves}.
 
-\subsubsection{V2.0}
-\indent \indent A segunda versão consistiu em utilizar \texttt{MPI\_Irecv}, versão não bloqueante da recepção de dados. Isto permite que a recepção de dados seja feita assincronamente, o que permite o processamento e escrita para ficheiros em simultâneo no \texttt{master}, pelo que este apenas bloqueia na ausência de trabalho.
+Quanto às duas abordagens \textit{multi-threaded}, o seu resultado foi pior do que as abordagens \textit{single-core} do \textit{master}; isto prende-se com o \textit{overhead} de criação de \texttt{threads} a cada request, da alocação, cópia e libertação de memória. Consideramos que esta abordagem beneficiaria da implementação de um esquema produtor/consumidor, de forma a usufruir dos dois \textit{cores} sem este overhead.
+
+Antes de mais, notar que a diferença não se fez notar, uma vez que a utilização de \texttt{MPI\_Irecv} desceu ligeiramente a média de execução, mas mantendo a curva geral.
+
+A análise que se segue prende-se à anormalia observada: \textit{runs} com número par de \textit{nodes}, ou seja, número ímpar de \textit{slaves}, obtêm piores resultados que os outros. Ainda que a diferença pudesse apenas estar relacionada com a discrepância na divisão das tarefas entre nós, tal não parece justificar a magnitude da diferença de performance. Uma vez que, durante a execução dos \textit{runs} dois dos 9 nós realçavam-se por demorar ligeiramente mais tempo que os outros, é possível que possa estar relacionado com os nós em utilização, uma vez que esta é uma solução virtualizada, o que não garante contenção total; de referir que a virtualização não se prende apenas ao nível de CPU e memória, mas mesmo ao nível do sistema de ficheiros (que, como mencionado anteriormente, apresentou algumas \textit{particularidades}).
+
+A principal justificação, no entanto, para um ganho desta magnitude prende-se com o tempo gasto na comunicação entre máquinas, que faz com que não se rentabilizem os 2 \texttt{cores} das 9 máquinas. Utilizando os tempos já apresentados sobre o tempo de execução de um oitavo das transacções, obtém-se o valor de, aproximadamente, $1500ms$ para o tempo dispendido em comunicação entre processos (comparando com a versão \texttt{MPI\_Irecv}; com a versão \texttt{MPI\_Recv} são dispendidos $2845ms$\footnote{Este valor, ao contrário do relativo ao \texttt{MPI\_Recv}, foi medido envolvendo todas as chamadas à função com medições de tempo, e somando para obter um valor total; apesar de não medir com precisão o tempo de recepção, usamo-lo como forma de comparação.}). Parece-nos assim que o ganho foi considerável e que o \textit{overhead} em comunicação é \textit{adequado} à dimensão do problema.
+
+De referir que os melhores runs ocorreram com 5 máquinas, onde se obtém um valor médio de $5000ms$ para a execução do programa. Assim, com 5 máquinas de 2 \textit{cores} de 2Ghz conseguimos obter a performance de uma máquina de 6 \textit{cores}.
 
 \clearpage
 
+\section{Conclusions}
+\indent \indent Com as abordagens tomadas concluímos que, apesar do paradigma de programação exigido pelo \textit{Grid Computing} ser relativamente difícil de fazer \textit{debug}, torna-se fácil criar sistemas escaláveis a dezenas de máquinas com pequenas modificações no código. As preocupações devem recair (e recaíram) sobre as quantidades de dados trocadas na rede, sobre uma boa definição de uma cadeia de comando e de papéis para cada computador, de forma a minimizar os \textit{bottleneck}s.
 
-\section{Resultados}
-\indent \indent No primeiro projecto conseguiu-se atingir uma performance de 200000 transacções por segundo numa máquina com seis cores, sendo que nesta a performance do nosso melhor algoritmo não foi além de X. Existem várias razões que podem justificar estes resultados. Neste segundo projecto as nove máquinas a que temos acesso estão a ser virtualizadas, pelo que mesmo cada uma delas tendo o seu próprio sistema de ficheiros, nada garante que fisicamente os ficheiros não estão no mesmo disco rígido, havendo assim um possível \textit{bottleneck} nos acessos a disco. Outra razão que pode explicar estes resultados é o facto de a máquina master ser \textit{single threaded}, pelo que é perdido muito tempo em operações de \texttt{MPI IO}. Por fim o facto de haver alguma, ainda que pouca, latência nas comunicações feitas pela rede pode também ajudar a explicar a performance da nossa solução.
+Uma das abordagens que se pretendia ter aborado era a distribuição de trabalho por parte do \textit{master}, mas infelizmente não foi possível. Com a quantidade de dados que o \textit{master} teria que enviar e receber, era possível que tal obtesse pior performance; no entanto, dada o \textit{setup} da solução (comunicação de alta velocidade), é possível que os resultados fossem surpreendemente melhores.
 
-\begin{figure}[h]
-	\includegraphics[keepaspectratio=true, width=0.4\textheight]{imgs/scalabilityv1.png}
-	\caption{V1 - Tempo de execução em função do número de nós.}
-\end{figure}
-\begin{figure}[h]
-	\includegraphics[keepaspectratio=true, width=0.4\textheight]{imgs/scalabilityv2.png}
-	\caption{V2 - Tempo de execução em função do número de nós.}
-\end{figure}
-\clearpage
-
-
-\section{Conclusão}
-\indent \indent Com o fim do projecto, já depois de termos reflectido sobre todos os dados que foram recolhidos, chega por fim a altura em que se tiram conclusões.
-
-Com este projecto aprendemos que o mundo da virtualização de máquinas tem os seus pontos positivos e os seus pontos negativos. É realmente fácil ``criar'' máquinas mas por vezes é pago a peso de ouro o custo dos acessos ao hardware limitado.
-
-Além disto aprendemos que ter um supercomputador não significa necessariamente ter um computador com um poder de processamento gigantesco, mas que pode significar também pegar em meia dúzia de computadores francamente mais fracos e ligá-los em rede. Existem claramente vantagens em termos financeiros, sendo que por outro lado é algo mais díficil de programar e sobretudo fazer debug numa arquitectura distribuída.
+Concluímos também que as variações entre \texttt{MPI\_Recv} e \texttt{MPI\_Irecv} são supérfluas, uma vez o \textit{master} consome a maior parte do seu tempo no processamento e não na recepção; acreditamos que se fizessem sentir que tivesse sido implementada um esquema de \textit{producer}/\textit{consumer} onde uma segunda \texttt{thread} do \textit{master} processasse os pedidos.
 \clearpage
 \end{document}
